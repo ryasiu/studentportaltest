@@ -352,7 +352,7 @@ export default function Home() {
           {/* Review Section */}
           <div className="mt-6 text-sm text-gray-600">
             <div className="flex items-center">
-              <span className="mr-2">• Click the "Submit" button to submit new or updated data</span>
+              <span className="mr-2">• Click the &quot;Submit&quot; button to submit new or updated data</span>
             </div>
           </div>
                 </div>
@@ -635,7 +635,7 @@ export default function Home() {
                     
                     <div className="mb-4">
                       <p className="text-sm text-gray-700 mb-2">
-                        Note: Please make sure you've entered the information correctly in this form
+                        Note: Please make sure you&apos;ve entered the information correctly in this form
                       </p>
                       <label className="flex items-center">
                         <input
