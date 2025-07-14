@@ -14,8 +14,30 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #f9fafb;
+    --foreground: #171717;
+  }
+}
+
+html {
+  background-color: #f9fafb !important;
+  color: #171717 !important;
+}
+
+body {
+  background-color: #f9fafb !important;
+  color: #171717 !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Force light mode */
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background-color: #f9fafb !important;
+    color: #171717 !important;
   }
 }
 
