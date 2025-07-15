@@ -170,10 +170,16 @@ export default function Home() {
   useEffect(() => {
     document.body.style.backgroundColor = '#f9fafb'
     document.documentElement.style.backgroundColor = '#f9fafb'
+    document.body.classList.remove('dark')
+    document.documentElement.classList.remove('dark')
+    // Remove any dark mode classes
+    const htmlElement = document.documentElement
+    htmlElement.style.setProperty('--background', '#f9fafb')
+    htmlElement.style.setProperty('--foreground', '#171717')
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex" style={{ backgroundColor: '#f9fafb' }}>
+    <div className="min-h-screen bg-gray-50 flex" style={{ backgroundColor: '#f9fafb', minHeight: '100vh' }}>
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-sm border-r border-gray-200">
         <div className="p-6">
@@ -360,7 +366,7 @@ export default function Home() {
 
       {/* Initial Upload Modal (for dashboard uploads) */}
       {isUploadModalOpen && !isAssociationModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-5 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-100 bg-opacity-80 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Upload Certification Documents</h3>
@@ -439,7 +445,7 @@ export default function Home() {
 
       {/* Document Association Modal */}
       {isAssociationModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-100 bg-opacity-80 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg w-full max-w-6xl mx-4 h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b">
