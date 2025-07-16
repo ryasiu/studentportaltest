@@ -727,7 +727,7 @@ export default function Home() {
 
       {/* Initial Upload Modal (for dashboard uploads) */}
       {isUploadModalOpen && !isAssociationModalOpen && (
-        <div className="fixed inset-0 bg-gray-100 bg-opacity-80 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Upload Certification Documents</h3>
@@ -807,7 +807,7 @@ export default function Home() {
       {/* Document Association Modal */}
       {isAssociationModalOpen && (
         <div 
-          className="fixed inset-0 bg-gray-100 bg-opacity-80 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
           onClick={() => {
             setShowCloseWarning(false)
             setFileToDelete(null)
