@@ -33,6 +33,7 @@ export default function Home() {
   const [showValidationErrors, setShowValidationErrors] = useState(false)
   const [preselectedDocumentType, setPreselectedDocumentType] = useState<string | null>(null)
   const [fileToDelete, setFileToDelete] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ message: string; isVisible: boolean } | null>(null)
 
   const [medicalDocuments, setMedicalDocuments] = useState<MedicalDocument[]>([
     { name: "COVID-19", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
@@ -58,6 +59,20 @@ export default function Home() {
       label: doc.name
     }))
   ]
+
+  // Toast functionality
+  const showToast = (message: string) => {
+    setToast({ message, isVisible: true })
+    setTimeout(() => {
+      setToast(prev => prev ? { ...prev, isVisible: false } : null)
+      setTimeout(() => setToast(null), 300) // Clear toast after fade out animation
+    }, 5000)
+  }
+
+  const dismissToast = () => {
+    setToast(prev => prev ? { ...prev, isVisible: false } : null)
+    setTimeout(() => setToast(null), 300) // Clear toast after fade out animation
+  }
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -250,6 +265,14 @@ export default function Home() {
     }
     
     setMedicalDocuments(newMedicalDocuments)
+    
+    // Show toast notification
+    const fileCount = uploadedFiles.length
+    const isUpdate = preselectedDocumentType !== null
+    const toastMessage = isUpdate 
+      ? `${fileCount} file${fileCount !== 1 ? 's' : ''} have been successfully updated`
+      : `${fileCount} file${fileCount !== 1 ? 's' : ''} have been successfully added`
+    showToast(toastMessage)
     
     // Close modal and reset state
     setIsAssociationModalOpen(false)
@@ -448,7 +471,7 @@ export default function Home() {
                 <div>VALID UNTIL</div>
                 <div>ACTIONS</div>
                 <div>UPLOADS</div>
-                <div>UPDATES</div>
+                <div>Updated</div>
               </div>
               
               <div className="grid grid-cols-6 gap-4 p-4 items-center border-b">
@@ -495,7 +518,7 @@ export default function Home() {
                 <div>VALID UNTIL</div>
                 <div>ACTIONS</div>
                 <div>UPLOADS</div>
-                <div>UPDATES</div>
+                <div>Updated</div>
               </div>
               
               {medicalDocuments.map((doc, index) => (
@@ -1038,6 +1061,21 @@ export default function Home() {
             </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-md shadow-lg flex items-center space-x-3 max-w-sm z-50 transition-all duration-300 ${
+          toast.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+        }`}>
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button
+            onClick={dismissToast}
+            className="text-gray-400 hover:text-white flex-shrink-0 transition-colors duration-200"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>
