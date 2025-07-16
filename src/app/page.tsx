@@ -1152,30 +1152,11 @@ export default function Home() {
                             onClick={(e) => {
                               e.preventDefault()
                               e.stopPropagation()
-                              console.log('X button clicked for file:', file.id, file.name)
-                              console.log('Current fileToDelete state:', fileToDelete)
-                              console.log('Event target:', e.target)
-                              console.log('Event currentTarget:', e.currentTarget)
-                              
-                              // Force the deletion dialog to show
+                              console.log('Delete button clicked for file:', file.id)
                               setFileToDelete(file.id)
-                              console.log('Set fileToDelete to:', file.id)
                             }}
-                            onMouseDown={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              console.log('X button mousedown for file:', file.id)
-                            }}
-                            className="text-white hover:text-white px-2 py-1 rounded hover:bg-red-600 transition-colors duration-200 cursor-pointer relative z-50 bg-red-500 border-2 border-red-600 hover:border-red-700 font-bold text-sm shadow-lg"
+                            className="text-white hover:text-white px-2 py-1 rounded-md hover:bg-red-600 transition-all duration-200 cursor-pointer relative z-50 bg-red-500 border border-red-600 hover:border-red-700 hover:shadow-lg"
                             title="Delete file"
-                            style={{ 
-                              minWidth: '24px', 
-                              minHeight: '24px',
-                              pointerEvents: 'auto',
-                              userSelect: 'none',
-                              fontSize: '14px',
-                              position: 'relative'
-                            }}
                             type="button"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -1183,14 +1164,17 @@ export default function Home() {
                           
                           {/* File Delete Warning Tooltip */}
                           {fileToDelete === file.id && (
-                            <div className="absolute top-full right-0 transform translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-[60] p-4 animate-in fade-in-0 zoom-in-95 duration-200">
-                              <div className="text-sm text-gray-700 mb-3">
+                            <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-2xl border border-gray-200 z-[9999] p-4 animate-in fade-in-0 zoom-in-95 duration-200">
+                              {/* Arrow pointing up */}
+                              <div className="absolute -top-2 left-6 w-4 h-4 bg-white border-l border-t border-gray-200 transform rotate-45"></div>
+                              
+                              <div className="text-sm text-gray-700 mb-4 font-medium">
+                                ⚠️ Delete Document
+                              </div>
+                              <div className="text-sm text-gray-600 mb-4">
                                 This action cannot be undone. The document will be permanently removed from this upload.
                               </div>
-                              <div className="text-xs text-blue-600 mb-2">
-                                Debug: Deleting file {file.id} ({file.name})
-                              </div>
-                              <div className="flex space-x-2">
+                              <div className="flex space-x-2 justify-end">
                                 <button
                                   onClick={(e) => {
                                     e.preventDefault()
@@ -1198,7 +1182,7 @@ export default function Home() {
                                     console.log('Cancel deletion for:', file.id)
                                     setFileToDelete(null)
                                   }}
-                                  className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors duration-200 font-medium"
+                                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 transition-colors duration-200 font-medium border border-gray-300"
                                 >
                                   Cancel
                                 </button>
@@ -1208,10 +1192,11 @@ export default function Home() {
                                     e.stopPropagation()
                                     console.log('Confirming deletion for:', file.id)
                                     confirmFileDelete(file.id)
+                                    setFileToDelete(null)
                                   }}
-                                  className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors duration-200 font-medium"
+                                  className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors duration-200 font-medium"
                                 >
-                                  Continue
+                                  Delete
                                 </button>
                               </div>
                             </div>
