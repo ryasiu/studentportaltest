@@ -33,7 +33,14 @@ export default function Home() {
   const [showValidationErrors, setShowValidationErrors] = useState(false)
   const [preselectedDocumentType, setPreselectedDocumentType] = useState<string | null>(null)
   const [fileToDelete, setFileToDelete] = useState<string | null>(null)
+  const [deleteButtonPosition, setDeleteButtonPosition] = useState<{ x: number; y: number } | null>(null)
   const [toast, setToast] = useState<{ message: string; isVisible: boolean } | null>(null)
+
+  // Helper function to reset delete confirmation state
+  const resetDeleteConfirmation = () => {
+    setFileToDelete(null)
+    setDeleteButtonPosition(null)
+  }
   const [scheduledReview, setScheduledReview] = useState<Date | null>(null)
   const [crcDocuments, setCrcDocuments] = useState<MedicalDocument[]>([
     { name: "Criminal Records Check", status: "No Status", action: "Add", provided: "Jun 2, 2025" }
@@ -1153,6 +1160,14 @@ export default function Home() {
                               e.preventDefault()
                               e.stopPropagation()
                               console.log('Delete button clicked for file:', file.id)
+                              
+                              // Get button position for tooltip placement
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              setDeleteButtonPosition({
+                                x: rect.left + rect.width / 2,
+                                y: rect.top
+                              })
+                              
                               setFileToDelete(file.id)
                             }}
                             className="text-white hover:text-white px-2 py-1 rounded-md hover:bg-red-600 transition-all duration-200 cursor-pointer relative z-50 bg-red-500 border border-red-600 hover:border-red-700 hover:shadow-lg"
@@ -1193,10 +1208,30 @@ export default function Home() {
               )}
             </div>
 
-            {/* File Delete Warning Tooltip - Positioned outside overflow container */}
-            {fileToDelete && (
-              <div className="fixed inset-0 z-[9999] pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-white rounded-lg shadow-2xl border border-gray-200 p-4 pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-200">
+            {/* File Delete Warning Tooltip - Positioned near clicked button */}
+            {fileToDelete && deleteButtonPosition && (
+              <div 
+                className="fixed inset-0 z-[9999] pointer-events-auto"
+                onClick={resetDeleteConfirmation}
+              >
+                <div 
+                  className="absolute w-80 bg-white rounded-lg shadow-2xl border border-gray-200 p-4 pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-200"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    left: Math.max(16, Math.min(window.innerWidth - 320 - 16, deleteButtonPosition.x - 160)),
+                    top: Math.max(16, deleteButtonPosition.y - 120),
+                  }}
+                >
+                  {/* Arrow pointing to delete button */}
+                  <div 
+                    className="absolute w-3 h-3 bg-white border-r border-b border-gray-200 transform rotate-45"
+                    style={{
+                      bottom: -6,
+                      left: '50%',
+                      transform: 'translateX(-50%) rotate(45deg)',
+                    }}
+                  ></div>
+                  
                   <div className="text-sm text-gray-700 mb-4 font-medium">
                     ⚠️ Delete Document
                   </div>
@@ -1209,7 +1244,7 @@ export default function Home() {
                         e.preventDefault()
                         e.stopPropagation()
                         console.log('Cancel deletion for:', fileToDelete)
-                        setFileToDelete(null)
+                        resetDeleteConfirmation()
                       }}
                       className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 transition-colors duration-200 font-medium border border-gray-300"
                     >
@@ -1221,7 +1256,7 @@ export default function Home() {
                         e.stopPropagation()
                         console.log('Confirming deletion for:', fileToDelete)
                         confirmFileDelete(fileToDelete)
-                        setFileToDelete(null)
+                        resetDeleteConfirmation()
                       }}
                       className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors duration-200 font-medium"
                     >
