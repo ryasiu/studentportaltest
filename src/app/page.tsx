@@ -28,7 +28,6 @@ export default function Home() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [currentFileIndex, setCurrentFileIndex] = useState(0)
   const [dragActive, setDragActive] = useState(false)
-  const [pendingAssociations, setPendingAssociations] = useState<string[]>([])
   const [showCloseWarning, setShowCloseWarning] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showValidationErrors, setShowValidationErrors] = useState(false)
@@ -252,9 +251,6 @@ export default function Home() {
     
     setMedicalDocuments(newMedicalDocuments)
     
-    // Add to pending associations
-    setPendingAssociations(prev => [...prev, ...uploadedFiles.map(f => f.id)])
-    
     // Close modal and reset state
     setIsAssociationModalOpen(false)
     setUploadedFiles([])
@@ -351,28 +347,12 @@ export default function Home() {
   }
 
   const areAllFilesValid = () => {
-    return uploadedFiles.every((file, index) => {
+    return uploadedFiles.every((file) => {
       const hasValidFileType = file.fileTypes.some(type => type !== '')
       const hasDateOfIssue = file.dateOfIssue && file.dateOfIssue !== ''
       const isConfirmed = file.confirmed
       return hasValidFileType && hasDateOfIssue && isConfirmed
     })
-  }
-
-  const getValidationErrors = (): string[] => {
-    const errors: string[] = []
-    if (!currentFile) return errors
-    
-    const hasValidFileType = currentFile.fileTypes.some(type => type !== '')
-    if (!hasValidFileType) errors.push('Select a requirement')
-    
-    const hasDateOfIssue = currentFile.dateOfIssue && currentFile.dateOfIssue !== ''
-    if (!hasDateOfIssue) errors.push('Enter date of issue')
-    
-    const isConfirmed = currentFile.confirmed
-    if (!isConfirmed) errors.push('Confirm information is correct')
-    
-    return errors
   }
 
   // Force light background
@@ -888,7 +868,7 @@ export default function Home() {
                       {preselectedDocumentType ? `No documents for ${preselectedDocumentType}` : 'No documents uploaded'}
                     </h3>
                     <p className="text-gray-500 mb-4">
-                      Click "Add {preselectedDocumentType ? 'More ' : ''}Documents" to get started
+                      Click &quot;Add {preselectedDocumentType ? 'More ' : ''}Documents&quot; to get started
                     </p>
                   </div>
                 </div>
