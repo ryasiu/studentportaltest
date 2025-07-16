@@ -1181,7 +1181,7 @@ export default function Home() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex">
+            <div className="flex-1 flex overflow-hidden">
               {uploadedFiles.length === 0 ? (
                 /* Empty State */
                 <div className="flex-1 flex items-center justify-center p-6">
@@ -1198,7 +1198,8 @@ export default function Home() {
               ) : (
                 <>
               {/* Left Side - Form */}
-              <div className="w-1/2 p-6 border-r">
+              <div className="w-1/2 border-r flex flex-col">
+                <div className="flex-1 overflow-y-auto p-6">
                 {/* Current Document Name */}
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <h4 className="text-sm font-medium text-blue-700 mb-1">Current Document</h4>
@@ -1301,10 +1302,12 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+                </div>
               </div>
 
               {/* Right Side - Preview */}
-              <div className="w-1/2 p-6">
+              <div className="w-1/2 flex flex-col">
+                <div className="flex-1 overflow-y-auto p-6">
                 <h4 className="text-sm font-medium text-gray-700 mb-4">
                   {currentFile?.name} Preview
                 </h4>
@@ -1317,14 +1320,15 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
+                </div>
               </div>
                 </>
               )}
             </div>
 
-            {/* Bottom Navigation */}
+            {/* Bottom Navigation - Sticky Footer */}
             {uploadedFiles.length > 0 && (
-            <div className="flex justify-between items-center p-4 border-t bg-gray-50">
+            <div className="flex justify-between items-center p-4 border-t bg-gray-50 mt-auto">
               <button
                 onClick={handleBack}
                 disabled={currentFileIndex === 0}
