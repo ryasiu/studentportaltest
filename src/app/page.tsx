@@ -35,6 +35,9 @@ export default function Home() {
   const [fileToDelete, setFileToDelete] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; isVisible: boolean } | null>(null)
   const [scheduledReview, setScheduledReview] = useState<Date | null>(null)
+  const [crcDocuments, setCrcDocuments] = useState<MedicalDocument[]>([
+    { name: "Criminal Records Check", status: "No Status", action: "Add", provided: "Jun 2, 2025" }
+  ])
 
   const [medicalDocuments, setMedicalDocuments] = useState<MedicalDocument[]>([
     { name: "COVID-19", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
@@ -52,9 +55,13 @@ export default function Home() {
     { name: "Rabies Primary Series", status: "No Status", action: "Update", provided: "Jun 2, 2025" }
   ])
 
-  // Create file types from medical documents
+  // Create file types from medical documents and CRC documents
   const fileTypes = [
     { value: '', label: 'Select requirement' },
+    ...crcDocuments.map(doc => ({
+      value: doc.name,
+      label: doc.name
+    })),
     ...medicalDocuments.map(doc => ({
       value: doc.name,
       label: doc.name
@@ -77,11 +84,10 @@ export default function Home() {
 
   // Calculate overall compliance status
   const getComplianceStatus = () => {
-    const documentsWithUploads = medicalDocuments.filter(doc => doc.hasUpload)
-    // Include CRC document in compliance calculation (simulated as not uploaded for demo)
-    const crcUploaded = false // This would be tracked separately in a real app
-    const totalRequiredDocuments = medicalDocuments.length + 1 // +1 for CRC
-    const totalUploaded = documentsWithUploads.length + (crcUploaded ? 1 : 0)
+    const medicalDocumentsWithUploads = medicalDocuments.filter(doc => doc.hasUpload)
+    const crcDocumentsWithUploads = crcDocuments.filter(doc => doc.hasUpload)
+    const totalRequiredDocuments = medicalDocuments.length + crcDocuments.length
+    const totalUploaded = medicalDocumentsWithUploads.length + crcDocumentsWithUploads.length
     
     if (totalUploaded === 0) {
       return 'No Status'
@@ -177,8 +183,8 @@ export default function Home() {
   const handleAddFromRow = (documentName: string) => {
     setPreselectedDocumentType(documentName)
     
-    // Check if this document type already has uploads
-    const existingDoc = medicalDocuments.find(doc => doc.name === documentName)
+    // Check if this document type already has uploads (check both CRC and medical documents)
+    const existingDoc = [...crcDocuments, ...medicalDocuments].find(doc => doc.name === documentName)
     if (existingDoc && existingDoc.hasUpload && existingDoc.uploadedFiles) {
       // Load existing files for editing
       const existingFiles: UploadedFile[] = existingDoc.uploadedFiles.map((fileName, index) => {
@@ -257,20 +263,33 @@ export default function Home() {
       return
     }
 
-    // Update medical documents status based on uploaded files
+    // Update medical documents and CRC documents status based on uploaded files
     const newMedicalDocuments = [...medicalDocuments]
+    const newCrcDocuments = [...crcDocuments]
     const currentTime = new Date().toISOString()
     
     // If updating existing documents, replace the files completely
     if (preselectedDocumentType) {
-      const docIndex = newMedicalDocuments.findIndex(doc => doc.name === preselectedDocumentType)
-      if (docIndex !== -1) {
-        const allFilesForThisType = uploadedFiles
-          .filter(file => file.fileTypes.includes(preselectedDocumentType))
-          .map(file => file.name)
-        
-        newMedicalDocuments[docIndex] = {
-          ...newMedicalDocuments[docIndex],
+      // Check if it's a CRC document
+      const crcDocIndex = newCrcDocuments.findIndex(doc => doc.name === preselectedDocumentType)
+      const medicalDocIndex = newMedicalDocuments.findIndex(doc => doc.name === preselectedDocumentType)
+      
+      const allFilesForThisType = uploadedFiles
+        .filter(file => file.fileTypes.includes(preselectedDocumentType))
+        .map(file => file.name)
+      
+      if (crcDocIndex !== -1) {
+        newCrcDocuments[crcDocIndex] = {
+          ...newCrcDocuments[crcDocIndex],
+          status: "Uploaded",
+          hasUpload: allFilesForThisType.length > 0,
+          uploadedFiles: allFilesForThisType,
+          uploadCount: allFilesForThisType.length,
+          lastUpdated: allFilesForThisType.length > 0 ? currentTime : undefined
+        }
+      } else if (medicalDocIndex !== -1) {
+        newMedicalDocuments[medicalDocIndex] = {
+          ...newMedicalDocuments[medicalDocIndex],
           status: "Uploaded",
           hasUpload: allFilesForThisType.length > 0,
           uploadedFiles: allFilesForThisType,
@@ -283,13 +302,28 @@ export default function Home() {
       uploadedFiles.forEach(file => {
         file.fileTypes.forEach(fileType => {
           if (fileType) {
-            const docIndex = newMedicalDocuments.findIndex(doc => doc.name === fileType)
-            if (docIndex !== -1) {
-              const existingFiles = newMedicalDocuments[docIndex].uploadedFiles || []
+            // Check if it's a CRC document
+            const crcDocIndex = newCrcDocuments.findIndex(doc => doc.name === fileType)
+            const medicalDocIndex = newMedicalDocuments.findIndex(doc => doc.name === fileType)
+            
+            if (crcDocIndex !== -1) {
+              const existingFiles = newCrcDocuments[crcDocIndex].uploadedFiles || []
               const newFiles = existingFiles.includes(file.name) ? existingFiles : [...existingFiles, file.name]
               
-              newMedicalDocuments[docIndex] = {
-                ...newMedicalDocuments[docIndex],
+              newCrcDocuments[crcDocIndex] = {
+                ...newCrcDocuments[crcDocIndex],
+                status: "Uploaded",
+                hasUpload: true,
+                uploadedFiles: newFiles,
+                uploadCount: newFiles.length,
+                lastUpdated: currentTime
+              }
+            } else if (medicalDocIndex !== -1) {
+              const existingFiles = newMedicalDocuments[medicalDocIndex].uploadedFiles || []
+              const newFiles = existingFiles.includes(file.name) ? existingFiles : [...existingFiles, file.name]
+              
+              newMedicalDocuments[medicalDocIndex] = {
+                ...newMedicalDocuments[medicalDocIndex],
                 status: "Uploaded",
                 hasUpload: true,
                 uploadedFiles: newFiles,
@@ -303,6 +337,7 @@ export default function Home() {
     }
     
     setMedicalDocuments(newMedicalDocuments)
+    setCrcDocuments(newCrcDocuments)
     
     // Show toast notification
     const fileCount = uploadedFiles.length
@@ -371,22 +406,42 @@ export default function Home() {
     const fileToRemove = uploadedFiles.find(f => f.id === fileId)
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
     
-    // Update medical documents if this file was associated
+    // Update medical documents or CRC documents if this file was associated
     if (fileToRemove && fileToRemove.fileTypes[0]) {
       const docName = fileToRemove.fileTypes[0]
-      setMedicalDocuments(prevDocs => prevDocs.map(doc => {
-        if (doc.name === docName && doc.uploadedFiles) {
-          const updatedFiles = doc.uploadedFiles.filter(fileName => fileName !== fileToRemove.name)
-          return {
-            ...doc,
-            uploadedFiles: updatedFiles,
-            uploadCount: updatedFiles.length,
-            hasUpload: updatedFiles.length > 0,
-            lastUpdated: updatedFiles.length > 0 ? doc.lastUpdated : undefined
+      
+      // Check if it's a CRC document
+      const isCrcDoc = crcDocuments.some(doc => doc.name === docName)
+      
+      if (isCrcDoc) {
+        setCrcDocuments(prevDocs => prevDocs.map(doc => {
+          if (doc.name === docName && doc.uploadedFiles) {
+            const updatedFiles = doc.uploadedFiles.filter(fileName => fileName !== fileToRemove.name)
+            return {
+              ...doc,
+              uploadedFiles: updatedFiles,
+              uploadCount: updatedFiles.length,
+              hasUpload: updatedFiles.length > 0,
+              lastUpdated: updatedFiles.length > 0 ? doc.lastUpdated : undefined
+            }
           }
-        }
-        return doc
-      }))
+          return doc
+        }))
+      } else {
+        setMedicalDocuments(prevDocs => prevDocs.map(doc => {
+          if (doc.name === docName && doc.uploadedFiles) {
+            const updatedFiles = doc.uploadedFiles.filter(fileName => fileName !== fileToRemove.name)
+            return {
+              ...doc,
+              uploadedFiles: updatedFiles,
+              uploadCount: updatedFiles.length,
+              hasUpload: updatedFiles.length > 0,
+              lastUpdated: updatedFiles.length > 0 ? doc.lastUpdated : undefined
+            }
+          }
+          return doc
+        }))
+      }
     }
     
     if (currentFileIndex >= uploadedFiles.length - 1) {
@@ -626,25 +681,46 @@ export default function Home() {
                 <div>Updated</div>
               </div>
               
-              <div className="grid grid-cols-6 gap-4 p-4 items-center border-b">
-                <div className="text-sm">Criminal Records Check</div>
-                <div className="text-sm text-gray-500">No Status</div>
-                <div></div>
-                <div>
-                  <button 
-                    onClick={() => handleAddFromRow("Criminal Records Check")}
-                    className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-1 rounded text-sm"
-                  >
-                    Add
-                  </button>
+              {crcDocuments.map((doc, index) => (
+                <div key={index} className="grid grid-cols-6 gap-4 p-4 items-center border-b last:border-b-0 hover:bg-gray-50">
+                  <div className="text-sm">{doc.name}</div>
+                  <div className="text-sm text-gray-500">No Status</div>
+                  <div></div>
+                  <div>
+                    <button 
+                      onClick={() => handleAddFromRow(doc.name)}
+                      className="px-4 py-1 rounded text-sm text-white bg-slate-600 hover:bg-slate-700"
+                    >
+                      {doc.hasUpload ? 'Update' : 'Add'}
+                    </button>
+                  </div>
+                  <div className="text-sm">
+                    {doc.uploadCount && doc.uploadCount > 0 ? (
+                      <div className="relative group">
+                        <span className="text-blue-600 font-medium cursor-help">
+                          {doc.uploadCount}
+                        </span>
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Files: {doc.uploadedFiles?.join(', ')}
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">0</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {doc.lastUpdated ? (
+                      <div>
+                        <div>{new Date(doc.lastUpdated).toLocaleDateString()}</div>
+                        <div>{new Date(doc.lastUpdated).toLocaleTimeString()}</div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">No updates</span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-sm">
-                  <span className="text-gray-400">0</span>
-                </div>
-                <div className="text-xs text-gray-500">
-                  <span className="text-gray-400">No updates</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -727,8 +803,8 @@ export default function Home() {
 
             {/* Initial Upload Modal (for dashboard uploads) */}
       {isUploadModalOpen && !isAssociationModalOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-20 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-2xl border border-gray-200">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Upload Certification Documents</h3>
               <button 
@@ -806,16 +882,9 @@ export default function Home() {
 
       {/* Document Association Modal */}
       {isAssociationModalOpen && (
-        <div 
-          className="fixed inset-0 bg-gray-500 bg-opacity-20 flex items-center justify-center z-50"
-          onClick={() => {
-            setShowCloseWarning(false)
-            setFileToDelete(null)
-          }}
-        >
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
           <div 
-            className="bg-white rounded-lg w-full max-w-6xl mx-4 h-[90vh] flex flex-col shadow-2xl border border-gray-200"
-            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl border border-gray-200"
           >
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b">
