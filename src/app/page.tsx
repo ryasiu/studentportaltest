@@ -372,40 +372,25 @@ export default function Home() {
   }
 
   const handleNext = () => {
-    // Validate current file before proceeding
-    if (!isCurrentFileValid()) {
-      setShowValidationErrors(true)
-      return
-    }
-
+    // Allow navigation regardless of current file validity
     if (currentFileIndex < uploadedFiles.length - 1) {
+      // Move to next file
       setCurrentFileIndex(prev => prev + 1)
-      setShowValidationErrors(false)
-      setFileToDelete(null)
+    } else {
+      // At last file - cycle back to first incomplete file, or first file if all complete
+      const firstIncompleteIndex = uploadedFiles.findIndex(file => !isFileValid(file))
+      if (firstIncompleteIndex !== -1) {
+        setCurrentFileIndex(firstIncompleteIndex)
+      } else {
+        setCurrentFileIndex(0)
+      }
     }
+    
+    setShowValidationErrors(false)
+    setFileToDelete(null)
   }
 
-  const handleSaveAndContinue = () => {
-    // If current file is invalid, show validation errors and stay
-    if (!isCurrentFileValid()) {
-      setShowValidationErrors(true)
-      return
-    }
 
-    // Find the first invalid file and navigate to it
-    const firstInvalidFileIndex = uploadedFiles.findIndex((file) => {
-      const hasValidFileType = file.fileTypes.some(type => type !== '')
-      const hasDateOfIssue = file.dateOfIssue && file.dateOfIssue !== ''
-      const isConfirmed = file.confirmed
-      return !(hasValidFileType && hasDateOfIssue && isConfirmed)
-    })
-
-    if (firstInvalidFileIndex !== -1) {
-      setCurrentFileIndex(firstInvalidFileIndex)
-      setShowValidationErrors(false)
-      setFileToDelete(null)
-    }
-  }
 
   const handleBack = () => {
     if (currentFileIndex > 0) {
@@ -490,21 +475,20 @@ export default function Home() {
   const currentFile = uploadedFiles[currentFileIndex]
 
   // Validation logic
-  const isCurrentFileValid = () => {
-    if (!currentFile) return false
-    const hasValidFileType = currentFile.fileTypes.some(type => type !== '')
-    const hasDateOfIssue = currentFile.dateOfIssue && currentFile.dateOfIssue !== ''
-    const isConfirmed = currentFile.confirmed
+  const isFileValid = (file: UploadedFile) => {
+    const hasValidFileType = file.fileTypes.some(type => type !== '')
+    const hasDateOfIssue = file.dateOfIssue && file.dateOfIssue !== ''
+    const isConfirmed = file.confirmed
     return hasValidFileType && hasDateOfIssue && isConfirmed
   }
 
+  const isCurrentFileValid = () => {
+    if (!currentFile) return false
+    return isFileValid(currentFile)
+  }
+
   const areAllFilesValid = () => {
-    return uploadedFiles.every((file) => {
-      const hasValidFileType = file.fileTypes.some(type => type !== '')
-      const hasDateOfIssue = file.dateOfIssue && file.dateOfIssue !== ''
-      const isConfirmed = file.confirmed
-      return hasValidFileType && hasDateOfIssue && isConfirmed
-    })
+    return uploadedFiles.every(file => isFileValid(file))
   }
 
   // Force light background
@@ -842,7 +826,14 @@ export default function Home() {
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Upload Certification Documents</h3>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Upload Certification Documents</h3>
+                {preselectedDocumentType && (
+                  <p className="text-sm text-blue-600 font-medium mt-1">
+                    📋 Uploading for: {preselectedDocumentType}
+                  </p>
+                )}
+              </div>
               <button 
                 onClick={() => setIsUploadModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1344,31 +1335,28 @@ export default function Home() {
               
               <div className="flex space-x-2">
                 {areAllFilesValid() ? (
-                  // All files are valid: Show Save and Close
+                  // All files are valid: Show Save and Close (enabled)
                   <button
                     onClick={handleSave}
                     className="px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 font-medium"
                   >
                     Save and Close
                   </button>
-                ) : currentFileIndex === uploadedFiles.length - 1 && isCurrentFileValid() ? (
-                  // Last file, current file is valid, but other files incomplete: Go to incomplete files
+                ) : uploadedFiles.length === 1 ? (
+                  // Single document: Show Save and Close (disabled until completed)
                   <button
-                    onClick={handleSaveAndContinue}
-                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+                    onClick={handleSave}
+                    disabled={!isCurrentFileValid()}
+                    className={`px-6 py-2 rounded font-medium ${
+                      isCurrentFileValid()
+                        ? 'bg-gray-700 text-white hover:bg-gray-800'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
-                    Review Incomplete Files
-                  </button>
-                ) : currentFileIndex === uploadedFiles.length - 1 && !isCurrentFileValid() ? (
-                  // Last file and current file is invalid: Can't proceed
-                  <button
-                    disabled
-                    className="px-6 py-2 bg-gray-300 text-gray-500 rounded cursor-not-allowed font-medium"
-                  >
-                    Complete This File First
+                    Save and Close
                   </button>
                 ) : (
-                  // Not last file: Show Next
+                  // Multiple documents: Show Next (always enabled)
                   <button
                     onClick={handleNext}
                     className="flex items-center px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 font-medium"
