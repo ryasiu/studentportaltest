@@ -10,6 +10,17 @@ interface UploadedFile extends File {
   confirmed?: boolean;
 }
 
+interface MedicalDocument {
+  name: string;
+  status: string;
+  action: string;
+  provided: string;
+  hasUpload?: boolean;
+  uploadedFiles?: string[];
+  uploadCount?: number;
+  lastUpdated?: string;
+}
+
 export default function Home() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isAssociationModalOpen, setIsAssociationModalOpen] = useState(false)
@@ -18,8 +29,13 @@ export default function Home() {
   const [currentFileIndex, setCurrentFileIndex] = useState(0)
   const [dragActive, setDragActive] = useState(false)
   const [pendingAssociations, setPendingAssociations] = useState<string[]>([])
+  const [showCloseWarning, setShowCloseWarning] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
+  const [preselectedDocumentType, setPreselectedDocumentType] = useState<string | null>(null)
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null)
 
-  const medicalDocuments = [
+  const [medicalDocuments, setMedicalDocuments] = useState<MedicalDocument[]>([
     { name: "COVID-19", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
     { name: "Health Clearance Card", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
     { name: "Hepatitis B Antigen Serology - HBsAg (Test for Infection)", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
@@ -33,13 +49,15 @@ export default function Home() {
     { name: "Mumps", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
     { name: "Polio", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
     { name: "Rabies Primary Series", status: "No Status", action: "Update", provided: "Jun 2, 2025" }
-  ]
+  ])
 
+  // Create file types from medical documents
   const fileTypes = [
     { value: '', label: 'Select requirement' },
-    { value: 'type1', label: 'File type 1' },
-    { value: 'type2', label: 'File type 2' },
-    { value: 'type3', label: 'File type 3' }
+    ...medicalDocuments.map(doc => ({
+      value: doc.name,
+      label: doc.name
+    }))
   ]
 
   const handleDrag = (e: React.DragEvent) => {
@@ -76,11 +94,12 @@ export default function Home() {
 
   const handleUpload = () => {
     // Convert selected files to uploaded files with IDs
+    const initialFileType = preselectedDocumentType || ''
     const filesWithIds: UploadedFile[] = selectedFiles.map((file, index) => ({
       ...file,
       id: `file-${Date.now()}-${index}`,
       name: file.name || `File ${uploadedFiles.length + index + 1}`,
-      fileTypes: [''],
+      fileTypes: [initialFileType],
       dateOfIssue: '',
       confirmed: false
     }))
@@ -91,14 +110,47 @@ export default function Home() {
     // If this is the first upload, set current index to 0, otherwise keep current position
     if (uploadedFiles.length === 0) {
       setCurrentFileIndex(0)
-      setIsAssociationModalOpen(true)
     }
+    
+    // Always open association modal after upload to allow users to associate files
+    setIsAssociationModalOpen(true)
     
     setIsUploadModalOpen(false)
     setSelectedFiles([])
+    setHasUnsavedChanges(false)
+    setShowValidationErrors(false)
+    setFileToDelete(null)
+  }
+
+  const handleAddFromRow = (documentName: string) => {
+    setPreselectedDocumentType(documentName)
+    
+    // Check if this document type already has uploads
+    const existingDoc = medicalDocuments.find(doc => doc.name === documentName)
+    if (existingDoc && existingDoc.hasUpload && existingDoc.uploadedFiles) {
+      // Load existing files for editing
+      const existingFiles: UploadedFile[] = existingDoc.uploadedFiles.map((fileName, index) => {
+        const mockFile = new File([''], fileName, { type: 'application/pdf' })
+        return Object.assign(mockFile, {
+          id: `existing-${Date.now()}-${index}`,
+          fileTypes: [documentName],
+          dateOfIssue: '', // Would load from saved data in real app
+          confirmed: true, // Assume previously confirmed
+        })
+      })
+      
+      setUploadedFiles(existingFiles)
+      setCurrentFileIndex(0)
+      setIsAssociationModalOpen(true)
+    } else {
+      // New upload flow
+      setIsUploadModalOpen(true)
+    }
   }
 
   const handleFileTypeChange = (value: string, index: number = 0) => {
+    setHasUnsavedChanges(true)
+    setShowValidationErrors(false)
     setUploadedFiles(prev => prev.map((file, fileIndex) => 
       fileIndex === currentFileIndex 
         ? { ...file, fileTypes: file.fileTypes.map((type, typeIndex) => 
@@ -131,18 +183,75 @@ export default function Home() {
   }
 
   const handleDateChange = (value: string) => {
+    setHasUnsavedChanges(true)
+    setShowValidationErrors(false)
     setUploadedFiles(prev => prev.map((file, index) => 
       index === currentFileIndex ? { ...file, dateOfIssue: value } : file
     ))
   }
 
   const handleConfirmationChange = (checked: boolean) => {
+    setHasUnsavedChanges(true)
+    setShowValidationErrors(false)
     setUploadedFiles(prev => prev.map((file, index) => 
       index === currentFileIndex ? { ...file, confirmed: checked } : file
     ))
   }
 
   const handleSave = () => {
+    // Check if all files are valid before saving
+    if (!areAllFilesValid()) {
+      setShowValidationErrors(true)
+      return
+    }
+
+    // Update medical documents status based on uploaded files
+    const newMedicalDocuments = [...medicalDocuments]
+    const currentTime = new Date().toISOString()
+    
+    // If updating existing documents, replace the files completely
+    if (preselectedDocumentType) {
+      const docIndex = newMedicalDocuments.findIndex(doc => doc.name === preselectedDocumentType)
+      if (docIndex !== -1) {
+        const allFilesForThisType = uploadedFiles
+          .filter(file => file.fileTypes.includes(preselectedDocumentType))
+          .map(file => file.name)
+        
+        newMedicalDocuments[docIndex] = {
+          ...newMedicalDocuments[docIndex],
+          status: "Uploaded",
+          hasUpload: allFilesForThisType.length > 0,
+          uploadedFiles: allFilesForThisType,
+          uploadCount: allFilesForThisType.length,
+          lastUpdated: allFilesForThisType.length > 0 ? currentTime : undefined
+        }
+      }
+    } else {
+      // Regular upload flow - add new files
+      uploadedFiles.forEach(file => {
+        file.fileTypes.forEach(fileType => {
+          if (fileType) {
+            const docIndex = newMedicalDocuments.findIndex(doc => doc.name === fileType)
+            if (docIndex !== -1) {
+              const existingFiles = newMedicalDocuments[docIndex].uploadedFiles || []
+              const newFiles = existingFiles.includes(file.name) ? existingFiles : [...existingFiles, file.name]
+              
+              newMedicalDocuments[docIndex] = {
+                ...newMedicalDocuments[docIndex],
+                status: "Uploaded",
+                hasUpload: true,
+                uploadedFiles: newFiles,
+                uploadCount: newFiles.length,
+                lastUpdated: currentTime
+              }
+            }
+          }
+        })
+      })
+    }
+    
+    setMedicalDocuments(newMedicalDocuments)
+    
     // Add to pending associations
     setPendingAssociations(prev => [...prev, ...uploadedFiles.map(f => f.id)])
     
@@ -150,21 +259,121 @@ export default function Home() {
     setIsAssociationModalOpen(false)
     setUploadedFiles([])
     setCurrentFileIndex(0)
+    setHasUnsavedChanges(false)
+    setShowCloseWarning(false)
+    setShowValidationErrors(false)
+    setPreselectedDocumentType(null)
+    setFileToDelete(null)
   }
 
   const handleNext = () => {
+    // Validate current file before proceeding
+    if (!isCurrentFileValid()) {
+      setShowValidationErrors(true)
+      return
+    }
+
     if (currentFileIndex < uploadedFiles.length - 1) {
       setCurrentFileIndex(prev => prev + 1)
+      setShowValidationErrors(false)
+      setFileToDelete(null)
     }
   }
 
   const handleBack = () => {
     if (currentFileIndex > 0) {
       setCurrentFileIndex(prev => prev - 1)
+      setShowValidationErrors(false)
+      setFileToDelete(null)
     }
   }
 
+  const handleCloseAttempt = () => {
+    if (hasUnsavedChanges) {
+      setShowCloseWarning(true)
+    } else {
+      setIsAssociationModalOpen(false)
+      setUploadedFiles([])
+      setCurrentFileIndex(0)
+      setPreselectedDocumentType(null)
+      setFileToDelete(null)
+    }
+  }
+
+  const handleForceClose = () => {
+    setIsAssociationModalOpen(false)
+    setUploadedFiles([])
+    setCurrentFileIndex(0)
+    setHasUnsavedChanges(false)
+    setShowCloseWarning(false)
+    setPreselectedDocumentType(null)
+    setFileToDelete(null)
+  }
+
+  const confirmFileDelete = (fileId: string) => {
+    const fileToRemove = uploadedFiles.find(f => f.id === fileId)
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+    
+    // Update medical documents if this file was associated
+    if (fileToRemove && fileToRemove.fileTypes[0]) {
+      const docName = fileToRemove.fileTypes[0]
+      setMedicalDocuments(prevDocs => prevDocs.map(doc => {
+        if (doc.name === docName && doc.uploadedFiles) {
+          const updatedFiles = doc.uploadedFiles.filter(fileName => fileName !== fileToRemove.name)
+          return {
+            ...doc,
+            uploadedFiles: updatedFiles,
+            uploadCount: updatedFiles.length,
+            hasUpload: updatedFiles.length > 0,
+            lastUpdated: updatedFiles.length > 0 ? doc.lastUpdated : undefined
+          }
+        }
+        return doc
+      }))
+    }
+    
+    if (currentFileIndex >= uploadedFiles.length - 1) {
+      setCurrentFileIndex(Math.max(0, uploadedFiles.length - 2))
+    }
+    
+    setFileToDelete(null)
+  }
+
   const currentFile = uploadedFiles[currentFileIndex]
+
+  // Validation logic
+  const isCurrentFileValid = () => {
+    if (!currentFile) return false
+    const hasValidFileType = currentFile.fileTypes.some(type => type !== '')
+    const hasDateOfIssue = currentFile.dateOfIssue && currentFile.dateOfIssue !== ''
+    const isConfirmed = currentFile.confirmed
+    return hasValidFileType && hasDateOfIssue && isConfirmed
+  }
+
+  const areAllFilesValid = () => {
+    return uploadedFiles.every((file, index) => {
+      const hasValidFileType = file.fileTypes.some(type => type !== '')
+      const hasDateOfIssue = file.dateOfIssue && file.dateOfIssue !== ''
+      const isConfirmed = file.confirmed
+      return hasValidFileType && hasDateOfIssue && isConfirmed
+    })
+  }
+
+  const getValidationErrors = (): string[] => {
+    const errors: string[] = []
+    if (!currentFile) return errors
+    
+    const hasValidFileType = currentFile.fileTypes.some(type => type !== '')
+    if (!hasValidFileType) errors.push('Select a requirement')
+    
+    const hasDateOfIssue = currentFile.dateOfIssue && currentFile.dateOfIssue !== ''
+    if (!hasDateOfIssue) errors.push('Enter date of issue')
+    
+    const isConfirmed = currentFile.confirmed
+    if (!isConfirmed) errors.push('Confirm information is correct')
+    
+    return errors
+  }
 
   // Force light background
   useEffect(() => {
@@ -235,44 +444,17 @@ export default function Home() {
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         <div className="p-8">
-          {/* Pending Associations Banner */}
-          {pendingAssociations.length > 0 && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-blue-900">Certifications</h3>
-                <div className="flex items-center space-x-2">
-                  <button className="bg-gray-700 text-white px-4 py-2 rounded text-sm">
-                    Pending Association ({pendingAssociations.length})
-                  </button>
-                  <button 
-                    onClick={() => setIsUploadModalOpen(true)}
-                    className="bg-gray-700 text-white px-4 py-2 rounded text-sm"
-                  >
-                    Upload
-                  </button>
-                </div>
-              </div>
-              <div className="mt-4 bg-white rounded border">
-                <div className="grid grid-cols-4 gap-4 p-3 bg-gray-200 text-sm font-medium">
-                  <div>Name</div>
-                  <div>Status</div>
-                  <div>Valid Until</div>
-                  <div>Actions</div>
-                </div>
-                {/* Empty rows for now */}
-                <div className="p-8 text-center text-gray-500">
-                  No certification data available
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {/* CRC/VSC Section */}
           <div className="mb-8">
             <div className="bg-slate-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center">
               <h2 className="text-lg font-medium">CRC/VSC</h2>
               <button 
-                onClick={() => setIsUploadModalOpen(true)}
+                onClick={() => {
+                  setPreselectedDocumentType(null)
+                  setIsUploadModalOpen(true)
+                }}
                 className="text-sm bg-slate-500 hover:bg-slate-400 px-3 py-1 rounded text-white"
               >
                 Upload
@@ -280,29 +462,32 @@ export default function Home() {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-b-lg">
-              <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 border-b text-sm font-medium text-gray-700">
+              <div className="grid grid-cols-6 gap-4 p-4 bg-gray-50 border-b text-sm font-medium text-gray-700">
                 <div>NAME</div>
                 <div>STATUS</div>
                 <div>VALID UNTIL</div>
                 <div>ACTIONS</div>
-                <div>ADD/INFO</div>
+                <div>UPLOADS</div>
+                <div>UPDATES</div>
               </div>
               
-              <div className="grid grid-cols-5 gap-4 p-4 items-center border-b">
+              <div className="grid grid-cols-6 gap-4 p-4 items-center border-b">
                 <div className="text-sm">Criminal Records Check</div>
                 <div className="text-sm text-gray-500">No Status</div>
                 <div></div>
                 <div>
-                  <button className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-1 rounded text-sm">
-                    Update
+                  <button 
+                    onClick={() => handleAddFromRow("Criminal Records Check")}
+                    className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-1 rounded text-sm"
+                  >
+                    Add
                   </button>
                 </div>
+                <div className="text-sm">
+                  <span className="text-gray-400">0</span>
+                </div>
                 <div className="text-xs text-gray-500">
-                  <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                    Data provided:
-                  </div>
-                  <div>Jun 2, 2025</div>
+                  <span className="text-gray-400">No updates</span>
                 </div>
               </div>
             </div>
@@ -313,7 +498,10 @@ export default function Home() {
             <div className="bg-slate-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center">
               <h2 className="text-lg font-medium">Permit Form / Medical Documents</h2>
               <button 
-                onClick={() => setIsUploadModalOpen(true)}
+                onClick={() => {
+                  setPreselectedDocumentType(null)
+                  setIsUploadModalOpen(true)
+                }}
                 className="text-sm bg-slate-500 hover:bg-slate-400 px-3 py-1 rounded text-white"
               >
                 Upload
@@ -321,34 +509,52 @@ export default function Home() {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-b-lg">
-              <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 border-b text-sm font-medium text-gray-700">
+              <div className="grid grid-cols-6 gap-4 p-4 bg-gray-50 border-b text-sm font-medium text-gray-700">
                 <div>NAME</div>
                 <div>STATUS</div>
                 <div>VALID UNTIL</div>
                 <div>ACTIONS</div>
-                <div>ADD/INFO</div>
+                <div>UPLOADS</div>
+                <div>UPDATES</div>
               </div>
               
               {medicalDocuments.map((doc, index) => (
-                <div key={index} className="grid grid-cols-5 gap-4 p-4 items-center border-b last:border-b-0 hover:bg-gray-50">
+                <div key={index} className="grid grid-cols-6 gap-4 p-4 items-center border-b last:border-b-0 hover:bg-gray-50">
                   <div className="text-sm">{doc.name}</div>
-                  <div className="text-sm text-gray-500">{doc.status}</div>
+                  <div className="text-sm text-gray-500">No Status</div>
                   <div></div>
                   <div>
-                    <button className={`px-4 py-1 rounded text-sm text-white ${
-                      doc.action === 'Add' 
-                        ? 'bg-blue-600 hover:bg-blue-700' 
-                        : 'bg-slate-600 hover:bg-slate-700'
-                    }`}>
-                      {doc.action}
+                    <button 
+                      onClick={() => handleAddFromRow(doc.name)}
+                      className="px-4 py-1 rounded text-sm text-white bg-slate-600 hover:bg-slate-700"
+                    >
+                      {doc.hasUpload ? 'Update' : 'Add'}
                     </button>
                   </div>
+                  <div className="text-sm">
+                    {doc.uploadCount && doc.uploadCount > 0 ? (
+                      <div className="relative group">
+                        <span className="text-blue-600 font-medium cursor-help">
+                          {doc.uploadCount}
+                        </span>
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          Files: {doc.uploadedFiles?.join(', ')}
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">0</span>
+                    )}
+                  </div>
                   <div className="text-xs text-gray-500">
-                    <div className="flex items-center">
-                      <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                      Data provided:
-                    </div>
-                    <div>{doc.provided}</div>
+                    {doc.lastUpdated ? (
+                      <div>
+                        <div>{new Date(doc.lastUpdated).toLocaleDateString()}</div>
+                        <div>{new Date(doc.lastUpdated).toLocaleTimeString()}</div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">No updates</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -445,28 +651,96 @@ export default function Home() {
 
       {/* Document Association Modal */}
       {isAssociationModalOpen && (
-        <div className="fixed inset-0 bg-gray-100 bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-6xl mx-4 h-[90vh] flex flex-col">
+        <div 
+          className="fixed inset-0 bg-gray-100 bg-opacity-80 flex items-center justify-center z-50"
+          onClick={() => {
+            setShowCloseWarning(false)
+            setFileToDelete(null)
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg w-full max-w-6xl mx-4 h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b">
               <div className="flex items-center">
-                <h3 className="text-2xl font-bold text-gray-900">Associate Documents</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {preselectedDocumentType ? `Update Documents - ${preselectedDocumentType}` : 'Associate Documents'}
+                </h3>
               </div>
               <div className="flex items-center space-x-2 relative">
+                {preselectedDocumentType && (
+                  <button 
+                    onClick={() => {
+                      // Update the medical document to remove all files
+                      setMedicalDocuments(prevDocs => prevDocs.map(doc => {
+                        if (doc.name === preselectedDocumentType) {
+                          return {
+                            ...doc,
+                            hasUpload: false,
+                            uploadedFiles: [],
+                            uploadCount: 0,
+                            lastUpdated: undefined
+                          }
+                        }
+                        return doc
+                      }))
+                      
+                      // Close the modal after removing all documents
+                      setIsAssociationModalOpen(false)
+                      setUploadedFiles([])
+                      setCurrentFileIndex(0)
+                      setPreselectedDocumentType(null)
+                      setHasUnsavedChanges(false)
+                      setShowValidationErrors(false)
+                      setFileToDelete(null)
+                    }}
+                    className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
+                  >
+                    Remove All
+                  </button>
+                )}
                 <button 
                   onClick={() => {
+                    setPreselectedDocumentType(preselectedDocumentType)
                     setIsUploadModalOpen(true)
                   }}
                   className="bg-gray-700 text-white px-4 py-2 rounded text-sm"
                 >
-                  Add Documents
+                  {preselectedDocumentType ? 'Add More Documents' : 'Add Documents'}
                 </button>
-                <button 
-                  onClick={() => setIsAssociationModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={handleCloseAttempt}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  
+                  {/* Close Warning Tooltip */}
+                  {showCloseWarning && (
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
+                      <div className="text-sm text-gray-700 mb-3">
+                        You have unsaved changes. Your changes will not be saved if you close this window.
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setShowCloseWarning(false)}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleForceClose}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                        >
+                          Close Anyway
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Tooltip Upload Modal */}
                 {isUploadModalOpen && (
@@ -554,7 +828,10 @@ export default function Home() {
               {uploadedFiles.map((file, index) => (
                 <button
                   key={file.id}
-                  onClick={() => setCurrentFileIndex(index)}
+                  onClick={() => {
+                    setCurrentFileIndex(index)
+                    setFileToDelete(null)
+                  }}
                   className={`px-4 py-2 text-sm border-r ${
                     index === currentFileIndex
                       ? 'bg-white border-t border-l border-r border-gray-300'
@@ -562,29 +839,66 @@ export default function Home() {
                   }`}
                 >
                   {truncateFileName(file.name)}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setUploadedFiles(prev => prev.filter(f => f.id !== file.id))
-                      if (currentFileIndex >= uploadedFiles.length - 1) {
-                        setCurrentFileIndex(Math.max(0, uploadedFiles.length - 2))
-                      }
-                    }}
-                    className="ml-2 text-gray-400 hover:text-gray-600"
-                  >
-                    ×
-                  </button>
+                  <div className="relative ml-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setFileToDelete(file.id)
+                      }}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      ×
+                    </button>
+                    
+                    {/* File Delete Warning Tooltip */}
+                    {fileToDelete === file.id && (
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
+                        <div className="text-sm text-gray-700 mb-3">
+                          This action cannot be undone. The document will be permanently removed from this upload.
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setFileToDelete(null)}
+                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => confirmFileDelete(file.id)}
+                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                          >
+                            Continue
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
 
             {/* Main Content */}
             <div className="flex-1 flex">
+              {uploadedFiles.length === 0 ? (
+                /* Empty State */
+                <div className="flex-1 flex items-center justify-center p-6">
+                  <div className="text-center">
+                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">
+                      {preselectedDocumentType ? `No documents for ${preselectedDocumentType}` : 'No documents uploaded'}
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                      Click "Add {preselectedDocumentType ? 'More ' : ''}Documents" to get started
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
               {/* Left Side - Form */}
               <div className="w-1/2 p-6 border-r">
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select requirement
+                    Select requirement <span className="text-red-500">*</span>
                   </label>
                   
                   {/* File Type Associations */}
@@ -593,7 +907,9 @@ export default function Home() {
                       <select
                         value={fileType}
                         onChange={(e) => handleFileTypeChange(e.target.value, index)}
-                        className="flex-1 p-2 border border-gray-300 rounded-md bg-gray-100"
+                        className={`flex-1 p-2 border rounded-md bg-gray-100 ${
+                          showValidationErrors && fileType === '' ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
                       >
                         {fileTypes.map(type => (
                           <option key={type.value} value={type.value}>
@@ -612,6 +928,11 @@ export default function Home() {
                     </div>
                   ))}
                   
+                  {/* Show error if no requirement selected */}
+                  {showValidationErrors && currentFile && !currentFile.fileTypes.some(type => type !== '') && (
+                    <p className="text-red-500 text-xs mt-1">Please select at least one requirement</p>
+                  )}
+                  
                   <button 
                     onClick={addFileTypeAssociation}
                     className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
@@ -628,22 +949,31 @@ export default function Home() {
                   <div className="border border-gray-300 rounded-b p-4">
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Date of Issue
+                        Date of Issue <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="date"
                         value={currentFile?.dateOfIssue || ''}
                         onChange={(e) => handleDateChange(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded"
+                        className={`w-full p-2 border rounded ${
+                          showValidationErrors && currentFile && (!currentFile.dateOfIssue || currentFile.dateOfIssue === '') 
+                            ? 'border-red-300 bg-red-50' 
+                            : 'border-gray-300'
+                        }`}
                       />
                       <p className="text-xs text-gray-500 mt-1">Format: YYYY-MM-DD</p>
+                      {showValidationErrors && currentFile && (!currentFile.dateOfIssue || currentFile.dateOfIssue === '') && (
+                        <p className="text-red-500 text-xs mt-1">Date of issue is required</p>
+                      )}
                     </div>
                     
                     <div className="mb-4">
                       <p className="text-sm text-gray-700 mb-2">
                         Note: Please make sure you&apos;ve entered the information correctly in this form
                       </p>
-                      <label className="flex items-center">
+                      <label className={`flex items-center p-2 rounded ${
+                        showValidationErrors && currentFile && !currentFile.confirmed ? 'bg-red-50 border border-red-200' : ''
+                      }`}>
                         <input
                           type="checkbox"
                           checked={currentFile?.confirmed || false}
@@ -651,9 +981,12 @@ export default function Home() {
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">
-                          I confirm that all information submitted by me are authentic and correct.
+                          I confirm that all information submitted by me are authentic and correct. <span className="text-red-500">*</span>
                         </span>
                       </label>
+                      {showValidationErrors && currentFile && !currentFile.confirmed && (
+                        <p className="text-red-500 text-xs mt-1">Please confirm the information is correct</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -674,9 +1007,12 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+                </>
+              )}
             </div>
 
             {/* Bottom Navigation */}
+            {uploadedFiles.length > 0 && (
             <div className="flex justify-between items-center p-4 border-t bg-gray-50">
               <button
                 onClick={handleBack}
@@ -692,26 +1028,35 @@ export default function Home() {
               </button>
               
               <div className="flex space-x-2">
-                <button
-                  onClick={handleSave}
-                  className="px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={currentFileIndex === uploadedFiles.length - 1}
-                  className={`flex items-center px-4 py-2 rounded ${
-                    currentFileIndex === uploadedFiles.length - 1
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-700 text-white hover:bg-gray-800'
-                  }`}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </button>
+                {uploadedFiles.length === 1 ? (
+                  // Single document: Show Save button
+                  <button
+                    onClick={handleSave}
+                    className="px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 font-medium"
+                  >
+                    Save
+                  </button>
+                ) : currentFileIndex === uploadedFiles.length - 1 ? (
+                  // Last document in multi-document upload: Show Save and Close
+                  <button
+                    onClick={handleSave}
+                    className="px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 font-medium"
+                  >
+                    Save and Close
+                  </button>
+                ) : (
+                  // Not last document in multi-document upload: Show Next only
+                  <button
+                    onClick={handleNext}
+                    className="flex items-center px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 font-medium"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </button>
+                )}
               </div>
             </div>
+            )}
           </div>
         </div>
       )}
