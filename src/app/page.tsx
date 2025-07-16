@@ -38,6 +38,7 @@ export default function Home() {
   const [crcDocuments, setCrcDocuments] = useState<MedicalDocument[]>([
     { name: "Criminal Records Check", status: "No Status", action: "Add", provided: "Jun 2, 2025" }
   ])
+  const [tabScrollPosition, setTabScrollPosition] = useState(0)
 
   const [medicalDocuments, setMedicalDocuments] = useState<MedicalDocument[]>([
     { name: "COVID-19", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
@@ -80,6 +81,16 @@ export default function Home() {
   const dismissToast = () => {
     setToast(prev => prev ? { ...prev, isVisible: false } : null)
     setTimeout(() => setToast(null), 300) // Clear toast after fade out animation
+  }
+
+  // Tab scrolling functions
+  const scrollTabsLeft = () => {
+    setTabScrollPosition(prev => Math.max(0, prev - 200))
+  }
+
+  const scrollTabsRight = () => {
+    const maxScroll = Math.max(0, (uploadedFiles.length * 150) - 600) // Approximate tab width and container width
+    setTabScrollPosition(prev => Math.min(maxScroll, prev + 200))
   }
 
   // Calculate overall compliance status
@@ -178,6 +189,7 @@ export default function Home() {
     setHasUnsavedChanges(false)
     setShowValidationErrors(false)
     setFileToDelete(null)
+    setTabScrollPosition(0)
   }
 
   const handleAddFromRow = (documentName: string) => {
@@ -356,6 +368,7 @@ export default function Home() {
     setShowValidationErrors(false)
     setPreselectedDocumentType(null)
     setFileToDelete(null)
+    setTabScrollPosition(0)
   }
 
   const handleNext = () => {
@@ -400,6 +413,7 @@ export default function Home() {
     setShowCloseWarning(false)
     setPreselectedDocumentType(null)
     setFileToDelete(null)
+    setTabScrollPosition(0)
   }
 
   const confirmFileDelete = (fileId: string) => {
@@ -884,7 +898,7 @@ export default function Home() {
       {isAssociationModalOpen && (
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
           <div 
-            className="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl border border-gray-200"
+            className="bg-white rounded-lg w-[80vw] h-[90vh] flex flex-col shadow-2xl border border-gray-200"
           >
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b">
@@ -1048,57 +1062,98 @@ export default function Home() {
             </div>
 
             {/* File Tabs */}
-            <div className="flex border-b bg-gray-50">
-              {uploadedFiles.map((file, index) => (
+            <div className="border-b bg-gray-50 flex items-center">
+              {/* Left Arrow */}
+              {uploadedFiles.length > 4 && (
                 <button
-                  key={file.id}
-                  onClick={() => {
-                    setCurrentFileIndex(index)
-                    setFileToDelete(null)
-                  }}
-                  className={`px-4 py-2 text-sm border-r ${
-                    index === currentFileIndex
-                      ? 'bg-white border-t border-l border-r border-gray-300'
-                      : 'bg-gray-50 hover:bg-gray-100'
+                  onClick={scrollTabsLeft}
+                  disabled={tabScrollPosition === 0}
+                  className={`flex-shrink-0 p-2 border-r border-gray-300 ${
+                    tabScrollPosition === 0 
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                   }`}
                 >
-                  {truncateFileName(file.name)}
-                  <div className="relative ml-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setFileToDelete(file.id)
-                      }}
-                      className="text-gray-400 hover:text-red-600"
-                    >
-                      ×
-                    </button>
-                    
-                    {/* File Delete Warning Tooltip */}
-                    {fileToDelete === file.id && (
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
-                        <div className="text-sm text-gray-700 mb-3">
-                          This action cannot be undone. The document will be permanently removed from this upload.
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => setFileToDelete(null)}
-                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => confirmFileDelete(file.id)}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                          >
-                            Continue
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-              ))}
+              )}
+              
+              {/* Scrollable Tabs Container */}
+              <div className="flex-1 overflow-hidden">
+                <div 
+                  className="flex transition-transform duration-300 ease-in-out"
+                  style={{ transform: `translateX(-${tabScrollPosition}px)` }}
+                >
+                  {uploadedFiles.map((file, index) => (
+                    <button
+                      key={file.id}
+                      onClick={() => {
+                        setCurrentFileIndex(index)
+                        setFileToDelete(null)
+                      }}
+                      className={`flex-shrink-0 px-4 py-2 text-sm border-r border-gray-300 whitespace-nowrap ${
+                        index === currentFileIndex
+                          ? 'bg-white border-t border-l border-r border-gray-300'
+                          : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                      style={{ minWidth: '150px' }}
+                    >
+                      <span className="block truncate max-w-[100px]">
+                        {truncateFileName(file.name, 20)}
+                      </span>
+                      <div className="relative ml-2 inline-block">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setFileToDelete(file.id)
+                          }}
+                          className="text-gray-400 hover:text-red-600"
+                        >
+                          ×
+                        </button>
+                        
+                        {/* File Delete Warning Tooltip */}
+                        {fileToDelete === file.id && (
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
+                            <div className="text-sm text-gray-700 mb-3">
+                              This action cannot be undone. The document will be permanently removed from this upload.
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => setFileToDelete(null)}
+                                className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => confirmFileDelete(file.id)}
+                                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                              >
+                                Continue
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Right Arrow */}
+              {uploadedFiles.length > 4 && (
+                <button
+                  onClick={scrollTabsRight}
+                  disabled={tabScrollPosition >= Math.max(0, (uploadedFiles.length * 150) - 600)}
+                  className={`flex-shrink-0 p-2 border-l border-gray-300 ${
+                    tabScrollPosition >= Math.max(0, (uploadedFiles.length * 150) - 600)
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                  }`}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Main Content */}
