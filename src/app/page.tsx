@@ -433,20 +433,31 @@ export default function Home() {
   }
 
   const confirmFileDelete = (fileId: string) => {
+    console.log('confirmFileDelete called with fileId:', fileId)
     const fileToRemove = uploadedFiles.find(f => f.id === fileId)
-    setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+    console.log('File to remove:', fileToRemove)
+    console.log('Current uploadedFiles:', uploadedFiles)
+    
+    setUploadedFiles(prev => {
+      const newFiles = prev.filter(f => f.id !== fileId)
+      console.log('New uploadedFiles after removal:', newFiles)
+      return newFiles
+    })
     
     // Update medical documents or CRC documents if this file was associated
     if (fileToRemove && fileToRemove.fileTypes[0]) {
       const docName = fileToRemove.fileTypes[0]
+      console.log('Updating document:', docName)
       
       // Check if it's a CRC document
       const isCrcDoc = crcDocuments.some(doc => doc.name === docName)
+      console.log('Is CRC document:', isCrcDoc)
       
       if (isCrcDoc) {
         setCrcDocuments(prevDocs => prevDocs.map(doc => {
           if (doc.name === docName && doc.uploadedFiles) {
             const updatedFiles = doc.uploadedFiles.filter(fileName => fileName !== fileToRemove.name)
+            console.log('Updated CRC files:', updatedFiles)
             return {
               ...doc,
               uploadedFiles: updatedFiles,
@@ -461,6 +472,7 @@ export default function Home() {
         setMedicalDocuments(prevDocs => prevDocs.map(doc => {
           if (doc.name === docName && doc.uploadedFiles) {
             const updatedFiles = doc.uploadedFiles.filter(fileName => fileName !== fileToRemove.name)
+            console.log('Updated medical files:', updatedFiles)
             return {
               ...doc,
               uploadedFiles: updatedFiles,
@@ -479,6 +491,7 @@ export default function Home() {
     }
     
     setFileToDelete(null)
+    console.log('File deletion completed')
   }
 
   const currentFile = uploadedFiles[currentFileIndex]
@@ -1137,22 +1150,35 @@ export default function Home() {
                         <div className="relative flex-shrink-0">
                           <button
                             onClick={(e) => {
+                              e.preventDefault()
                               e.stopPropagation()
                               console.log('X button clicked for file:', file.id, file.name)
+                              console.log('Current fileToDelete state:', fileToDelete)
+                              console.log('Event target:', e.target)
+                              console.log('Event currentTarget:', e.currentTarget)
+                              
+                              // Force the deletion dialog to show
                               setFileToDelete(file.id)
+                              console.log('Set fileToDelete to:', file.id)
                             }}
-                            className="text-red-500 hover:text-red-700 px-1 py-1 rounded hover:bg-red-100 transition-colors duration-200 cursor-pointer relative z-30 bg-red-50 border border-red-200 hover:border-red-300 font-bold text-xs"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              console.log('X button mousedown for file:', file.id)
+                            }}
+                            className="text-white hover:text-white px-2 py-1 rounded hover:bg-red-600 transition-colors duration-200 cursor-pointer relative z-50 bg-red-500 border-2 border-red-600 hover:border-red-700 font-bold text-sm shadow-lg"
                             title="Delete file"
                             style={{ 
-                              minWidth: '20px', 
-                              minHeight: '20px',
+                              minWidth: '24px', 
+                              minHeight: '24px',
                               pointerEvents: 'auto',
                               userSelect: 'none',
-                              fontSize: '12px'
+                              fontSize: '14px',
+                              position: 'relative'
                             }}
                             type="button"
                           >
-                            ×
+                            <Trash2 className="w-3 h-3" />
                           </button>
                           
                           {/* File Delete Warning Tooltip */}
@@ -1161,10 +1187,15 @@ export default function Home() {
                               <div className="text-sm text-gray-700 mb-3">
                                 This action cannot be undone. The document will be permanently removed from this upload.
                               </div>
+                              <div className="text-xs text-blue-600 mb-2">
+                                Debug: Deleting file {file.id} ({file.name})
+                              </div>
                               <div className="flex space-x-2">
                                 <button
                                   onClick={(e) => {
+                                    e.preventDefault()
                                     e.stopPropagation()
+                                    console.log('Cancel deletion for:', file.id)
                                     setFileToDelete(null)
                                   }}
                                   className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors duration-200 font-medium"
@@ -1173,7 +1204,9 @@ export default function Home() {
                                 </button>
                                 <button
                                   onClick={(e) => {
+                                    e.preventDefault()
                                     e.stopPropagation()
+                                    console.log('Confirming deletion for:', file.id)
                                     confirmFileDelete(file.id)
                                   }}
                                   className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors duration-200 font-medium"
