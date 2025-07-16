@@ -1164,9 +1164,9 @@ export default function Home() {
                           
                           {/* File Delete Warning Tooltip */}
                           {fileToDelete === file.id && (
-                            <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-2xl border border-gray-200 z-[9999] p-4 animate-in fade-in-0 zoom-in-95 duration-200">
-                              {/* Arrow pointing up */}
-                              <div className="absolute -top-2 left-6 w-4 h-4 bg-white border-l border-t border-gray-200 transform rotate-45"></div>
+                            <div className="absolute bottom-full left-0 mb-2 w-72 bg-white rounded-lg shadow-2xl border border-gray-200 z-[9999] p-4 animate-in fade-in-0 zoom-in-95 duration-200" style={{marginLeft: '-8rem'}}>
+                              {/* Arrow pointing down */}
+                              <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white border-r border-b border-gray-200 rotate-45"></div>
                               
                               <div className="text-sm text-gray-700 mb-4 font-medium">
                                 ⚠️ Delete Document
