@@ -34,6 +34,7 @@ export default function Home() {
   const [preselectedDocumentType, setPreselectedDocumentType] = useState<string | null>(null)
   const [fileToDelete, setFileToDelete] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; isVisible: boolean } | null>(null)
+  const [scheduledReview, setScheduledReview] = useState<Date | null>(null)
 
   const [medicalDocuments, setMedicalDocuments] = useState<MedicalDocument[]>([
     { name: "COVID-19", status: "No Status", action: "Update", provided: "Jun 2, 2025" },
@@ -72,6 +73,43 @@ export default function Home() {
   const dismissToast = () => {
     setToast(prev => prev ? { ...prev, isVisible: false } : null)
     setTimeout(() => setToast(null), 300) // Clear toast after fade out animation
+  }
+
+  // Calculate overall compliance status
+  const getComplianceStatus = () => {
+    const documentsWithUploads = medicalDocuments.filter(doc => doc.hasUpload)
+    // Include CRC document in compliance calculation (simulated as not uploaded for demo)
+    const crcUploaded = false // This would be tracked separately in a real app
+    const totalRequiredDocuments = medicalDocuments.length + 1 // +1 for CRC
+    const totalUploaded = documentsWithUploads.length + (crcUploaded ? 1 : 0)
+    
+    if (totalUploaded === 0) {
+      return 'No Status'
+    } else if (totalUploaded === totalRequiredDocuments) {
+      return 'Pass'
+    } else {
+      return 'Fail'
+    }
+  }
+
+  // Check if requirements are met for booking
+  const areRequirementsMet = () => {
+    return getComplianceStatus() === 'Pass'
+  }
+
+  const handleScheduleReview = () => {
+    // For demo purposes, simulate scheduling a review
+    if (scheduledReview) {
+      // Edit existing booking
+      alert('Navigating to scheduler page to edit booking...')
+    } else {
+      // Book new review - simulate setting a scheduled date
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 7) // 7 days from now
+      futureDate.setHours(14, 30, 0, 0) // 2:30 PM
+      setScheduledReview(futureDate)
+      showToast('Review successfully scheduled')
+    }
   }
 
   const handleDrag = (e: React.DragEvent) => {
@@ -448,6 +486,72 @@ export default function Home() {
       <div className="flex-1 overflow-auto">
         <div className="p-8">
 
+          {/* Compliance Overview Section */}
+          <div className="mb-8 bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              {/* Overall Compliance Status */}
+              <div className="flex items-center space-x-6">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-1">Overall Compliance Status</h3>
+                  <div className="flex items-center space-x-2">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      getComplianceStatus() === 'Pass' ? 'bg-green-100 text-green-800' :
+                      getComplianceStatus() === 'Fail' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {getComplianceStatus()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Compliance Summary Document */}
+                <div>
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">
+                    Compliance Summary Document
+                  </button>
+                </div>
+              </div>
+
+              {/* Schedule Review */}
+              <div className="relative">
+                {scheduledReview ? (
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Review scheduled for {scheduledReview.toLocaleDateString()} at {scheduledReview.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <button 
+                      onClick={handleScheduleReview}
+                      className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded text-sm font-medium"
+                    >
+                      Edit Booking
+                    </button>
+                  </div>
+                ) : (
+                  <div className="group">
+                    <button 
+                      onClick={handleScheduleReview}
+                      disabled={!areRequirementsMet()}
+                      className={`px-4 py-2 rounded text-sm font-medium ${
+                        areRequirementsMet() 
+                          ? 'bg-slate-600 hover:bg-slate-700 text-white' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Book Review
+                    </button>
+                    
+                    {/* Tooltip for disabled state */}
+                    {!areRequirementsMet() && (
+                      <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                        Requirements to book not met
+                        <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* CRC/VSC Section */}
           <div className="mb-8">
