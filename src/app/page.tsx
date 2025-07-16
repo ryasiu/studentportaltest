@@ -385,6 +385,28 @@ export default function Home() {
     }
   }
 
+  const handleSaveAndContinue = () => {
+    // If current file is invalid, show validation errors and stay
+    if (!isCurrentFileValid()) {
+      setShowValidationErrors(true)
+      return
+    }
+
+    // Find the first invalid file and navigate to it
+    const firstInvalidFileIndex = uploadedFiles.findIndex((file) => {
+      const hasValidFileType = file.fileTypes.some(type => type !== '')
+      const hasDateOfIssue = file.dateOfIssue && file.dateOfIssue !== ''
+      const isConfirmed = file.confirmed
+      return !(hasValidFileType && hasDateOfIssue && isConfirmed)
+    })
+
+    if (firstInvalidFileIndex !== -1) {
+      setCurrentFileIndex(firstInvalidFileIndex)
+      setShowValidationErrors(false)
+      setFileToDelete(null)
+    }
+  }
+
   const handleBack = () => {
     if (currentFileIndex > 0) {
       setCurrentFileIndex(prev => prev - 1)
@@ -818,7 +840,7 @@ export default function Home() {
             {/* Initial Upload Modal (for dashboard uploads) */}
       {isUploadModalOpen && !isAssociationModalOpen && (
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl border border-gray-200">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Upload Certification Documents</h3>
               <button 
@@ -862,7 +884,7 @@ export default function Home() {
                 <h4 className="text-sm font-medium text-gray-700 mb-2">
                   Selected Files ({selectedFiles.length})
                 </h4>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
+                <div className="space-y-2 max-h-64 overflow-y-auto">
                   {selectedFiles.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                       <span className="text-sm text-gray-700 truncate">{file.name}</span>
@@ -982,7 +1004,7 @@ export default function Home() {
                 
                 {/* Tooltip Upload Modal */}
                 {isUploadModalOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="absolute top-full right-0 mt-2 w-96 max-h-[70vh] overflow-y-auto bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                     <div className="p-4">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-medium text-gray-900">Upload Certification Documents</h3>
@@ -1027,7 +1049,7 @@ export default function Home() {
                           <h4 className="text-sm font-medium text-gray-700 mb-2">
                             Selected Files ({selectedFiles.length})
                           </h4>
-                          <div className="space-y-2 max-h-24 overflow-y-auto">
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
                             {selectedFiles.map((file, index) => (
                               <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                                 <span className="text-sm text-gray-700 truncate">{file.name}</span>
@@ -1098,42 +1120,44 @@ export default function Home() {
                       }`}
                       style={{ minWidth: '150px' }}
                     >
-                      <span className="block truncate max-w-[100px]">
-                        {truncateFileName(file.name, 20)}
-                      </span>
-                      <div className="relative ml-2 inline-block">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setFileToDelete(file.id)
-                          }}
-                          className="text-gray-400 hover:text-red-600"
-                        >
-                          ×
-                        </button>
-                        
-                        {/* File Delete Warning Tooltip */}
-                        {fileToDelete === file.id && (
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
-                            <div className="text-sm text-gray-700 mb-3">
-                              This action cannot be undone. The document will be permanently removed from this upload.
+                      <div className="flex items-center gap-2 w-full">
+                        <span className="truncate flex-1 max-w-[100px]">
+                          {truncateFileName(file.name, 20)}
+                        </span>
+                        <div className="relative flex-shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setFileToDelete(file.id)
+                            }}
+                            className="text-gray-400 hover:text-red-600"
+                          >
+                            ×
+                          </button>
+                          
+                          {/* File Delete Warning Tooltip */}
+                          {fileToDelete === file.id && (
+                            <div className="absolute top-full right-0 transform translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
+                              <div className="text-sm text-gray-700 mb-3">
+                                This action cannot be undone. The document will be permanently removed from this upload.
+                              </div>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => setFileToDelete(null)}
+                                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => confirmFileDelete(file.id)}
+                                  className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                                >
+                                  Continue
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => setFileToDelete(null)}
-                                className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => confirmFileDelete(file.id)}
-                                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                              >
-                                Continue
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </button>
                   ))}
@@ -1175,6 +1199,14 @@ export default function Home() {
                 <>
               {/* Left Side - Form */}
               <div className="w-1/2 p-6 border-r">
+                {/* Current Document Name */}
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-700 mb-1">Current Document</h4>
+                  <p className="text-lg font-semibold text-blue-900 break-all">
+                    {currentFile ? currentFile.name : 'No document selected'}
+                  </p>
+                </div>
+
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select requirement <span className="text-red-500">*</span>
@@ -1307,24 +1339,32 @@ export default function Home() {
               </button>
               
               <div className="flex space-x-2">
-                {uploadedFiles.length === 1 ? (
-                  // Single document: Show Save button
-                  <button
-                    onClick={handleSave}
-                    className="px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 font-medium"
-                  >
-                    Save
-                  </button>
-                ) : currentFileIndex === uploadedFiles.length - 1 ? (
-                  // Last document in multi-document upload: Show Save and Close
+                {areAllFilesValid() ? (
+                  // All files are valid: Show Save and Close
                   <button
                     onClick={handleSave}
                     className="px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 font-medium"
                   >
                     Save and Close
                   </button>
+                ) : currentFileIndex === uploadedFiles.length - 1 && isCurrentFileValid() ? (
+                  // Last file, current file is valid, but other files incomplete: Go to incomplete files
+                  <button
+                    onClick={handleSaveAndContinue}
+                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+                  >
+                    Review Incomplete Files
+                  </button>
+                ) : currentFileIndex === uploadedFiles.length - 1 && !isCurrentFileValid() ? (
+                  // Last file and current file is invalid: Can't proceed
+                  <button
+                    disabled
+                    className="px-6 py-2 bg-gray-300 text-gray-500 rounded cursor-not-allowed font-medium"
+                  >
+                    Complete This File First
+                  </button>
                 ) : (
-                  // Not last document in multi-document upload: Show Next only
+                  // Not last file: Show Next
                   <button
                     onClick={handleNext}
                     className="flex items-center px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 font-medium"
