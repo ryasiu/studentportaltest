@@ -1,6 +1,6 @@
 'use client'
 
-import { FileText, Calendar, User, Bell, Settings, Home as HomeIcon, CheckCircle, Upload, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FileText, Calendar, User, Bell, Settings, Home as HomeIcon, CheckCircle, Upload, X, Trash2, ChevronLeft, ChevronRight, Shield, Download, Clock } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 interface UploadedFile extends File {
@@ -487,69 +487,117 @@ export default function Home() {
         <div className="p-8">
 
           {/* Compliance Overview Section */}
-          <div className="mb-8 bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              {/* Overall Compliance Status */}
-              <div className="flex items-center space-x-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-1">Overall Compliance Status</h3>
-                  <div className="flex items-center space-x-2">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      getComplianceStatus() === 'Pass' ? 'bg-green-100 text-green-800' :
-                      getComplianceStatus() === 'Fail' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {getComplianceStatus()}
-                    </span>
-                  </div>
+          <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Overall Compliance Status Card */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-shadow duration-300">
+              <div className="flex items-center mb-4">
+                <div className={`p-3 rounded-full mr-4 ${
+                  getComplianceStatus() === 'Pass' ? 'bg-green-100' :
+                  getComplianceStatus() === 'Fail' ? 'bg-red-100' :
+                  'bg-gray-100'
+                }`}>
+                  <Shield className={`w-6 h-6 ${
+                    getComplianceStatus() === 'Pass' ? 'text-green-600' :
+                    getComplianceStatus() === 'Fail' ? 'text-red-600' :
+                    'text-gray-600'
+                  }`} />
                 </div>
-
-                {/* Compliance Summary Document */}
                 <div>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">
-                    Compliance Summary Document
-                  </button>
+                  <h3 className="text-lg font-semibold text-gray-800">Compliance Status</h3>
+                  <p className="text-sm text-gray-500">Overall requirement status</p>
                 </div>
               </div>
-
-              {/* Schedule Review */}
-              <div className="relative">
-                {scheduledReview ? (
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600 mb-2">
-                      Review scheduled for {scheduledReview.toLocaleDateString()} at {scheduledReview.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    <button 
-                      onClick={handleScheduleReview}
-                      className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded text-sm font-medium"
-                    >
-                      Edit Booking
-                    </button>
-                  </div>
-                ) : (
-                  <div className="group">
-                    <button 
-                      onClick={handleScheduleReview}
-                      disabled={!areRequirementsMet()}
-                      className={`px-4 py-2 rounded text-sm font-medium ${
-                        areRequirementsMet() 
-                          ? 'bg-slate-600 hover:bg-slate-700 text-white' 
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      Book Review
-                    </button>
-                    
-                    {/* Tooltip for disabled state */}
-                    {!areRequirementsMet() && (
-                      <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                        Requirements to book not met
-                        <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                      </div>
-                    )}
-                  </div>
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex items-center px-4 py-2 rounded-full text-base font-semibold ${
+                  getComplianceStatus() === 'Pass' ? 'bg-green-100 text-green-800' :
+                  getComplianceStatus() === 'Fail' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {getComplianceStatus()}
+                </span>
+                {getComplianceStatus() === 'Pass' && (
+                  <CheckCircle className="w-6 h-6 text-green-600" />
                 )}
               </div>
+            </div>
+
+            {/* Compliance Summary Document Card */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-shadow duration-300">
+              <div className="flex items-center mb-4">
+                <div className="p-3 rounded-full bg-blue-100 mr-4">
+                  <Download className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Documentation</h3>
+                  <p className="text-sm text-gray-500">Download compliance report</p>
+                </div>
+              </div>
+              <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                Get Summary Document
+              </button>
+            </div>
+
+            {/* Schedule Review Card */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-shadow duration-300">
+              <div className="flex items-center mb-4">
+                <div className={`p-3 rounded-full mr-4 ${
+                  scheduledReview ? 'bg-green-100' : areRequirementsMet() ? 'bg-blue-100' : 'bg-gray-100'
+                }`}>
+                  <Calendar className={`w-6 h-6 ${
+                    scheduledReview ? 'text-green-600' : areRequirementsMet() ? 'text-blue-600' : 'text-gray-400'
+                  }`} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Review Appointment</h3>
+                  <p className="text-sm text-gray-500">
+                    {scheduledReview ? 'Appointment scheduled' : 'Schedule your review'}
+                  </p>
+                </div>
+              </div>
+              
+              {scheduledReview ? (
+                <div>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center text-green-800">
+                      <Clock className="w-4 h-4 mr-2" />
+                      <span className="text-sm font-medium">
+                        {scheduledReview.toLocaleDateString()} at {scheduledReview.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleScheduleReview}
+                    className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    Edit Booking
+                  </button>
+                </div>
+              ) : (
+                <div className="relative group">
+                  <button 
+                    onClick={handleScheduleReview}
+                    disabled={!areRequirementsMet()}
+                    className={`w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                      areRequirementsMet() 
+                        ? 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5' 
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Book Review
+                  </button>
+                  
+                  {/* Enhanced tooltip for disabled state */}
+                  {!areRequirementsMet() && (
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-56 bg-gray-900 text-white text-sm rounded-lg px-4 py-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl">
+                      <div className="text-center">
+                        <div className="font-medium mb-1">Requirements not met</div>
+                        <div className="text-xs text-gray-300">Complete all document uploads to enable booking</div>
+                      </div>
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
