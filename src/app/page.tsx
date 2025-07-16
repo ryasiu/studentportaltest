@@ -262,11 +262,7 @@ export default function Home() {
     ))
   }
 
-  const truncateFileName = (fileName: string | undefined, maxLength: number = 25) => {
-    if (!fileName) return 'Unknown File'
-    if (fileName.length <= maxLength) return fileName
-    return fileName.substring(0, maxLength - 3) + '...'
-  }
+
 
   const handleDateChange = (value: string) => {
     setHasUnsavedChanges(true)
