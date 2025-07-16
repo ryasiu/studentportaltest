@@ -725,10 +725,10 @@ export default function Home() {
                 </div>
       </div>
 
-      {/* Initial Upload Modal (for dashboard uploads) */}
+            {/* Initial Upload Modal (for dashboard uploads) */}
       {isUploadModalOpen && !isAssociationModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 pointer-events-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Upload Certification Documents</h3>
               <button 
@@ -806,16 +806,9 @@ export default function Home() {
 
       {/* Document Association Modal */}
       {isAssociationModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
-          onClick={() => {
-            setShowCloseWarning(false)
-            setFileToDelete(null)
-          }}
-        >
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
           <div 
-            className="bg-white rounded-lg w-full max-w-6xl mx-4 h-[90vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-lg w-full max-w-6xl mx-4 h-[90vh] flex flex-col pointer-events-auto"
           >
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b">
