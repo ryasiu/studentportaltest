@@ -85,12 +85,21 @@ export default function Home() {
 
   // Tab scrolling functions
   const scrollTabsLeft = () => {
-    setTabScrollPosition(prev => Math.max(0, prev - 200))
+    const tabWidth = 200
+    setTabScrollPosition(prev => Math.max(0, prev - tabWidth))
   }
 
   const scrollTabsRight = () => {
-    const maxScroll = Math.max(0, (uploadedFiles.length * 150) - 600) // Approximate tab width and container width
-    setTabScrollPosition(prev => Math.min(maxScroll, prev + 200))
+    // Simplified calculation - scroll by one tab width at a time
+    const tabWidth = 200
+    const maxScroll = Math.max(0, (uploadedFiles.length - 4) * tabWidth) // Show 4 tabs at once
+    setTabScrollPosition(prev => Math.min(maxScroll, prev + tabWidth))
+  }
+
+  // Check if scrolling is needed - show arrows when we have more than 4 files 
+  // or when tabs would exceed a reasonable container width
+  const shouldShowScrollArrows = () => {
+    return uploadedFiles.length > 4
   }
 
   // Calculate overall compliance status
@@ -1077,17 +1086,17 @@ export default function Home() {
             {/* File Tabs */}
             <div className="border-b bg-gray-50 flex items-center">
               {/* Left Arrow */}
-              {uploadedFiles.length > 4 && (
+              {shouldShowScrollArrows() && (
                 <button
                   onClick={scrollTabsLeft}
                   disabled={tabScrollPosition === 0}
-                  className={`flex-shrink-0 p-2 border-r border-gray-300 ${
+                  className={`flex-shrink-0 p-3 border-r border-gray-300 transition-colors duration-200 bg-white shadow-sm ${
                     tabScrollPosition === 0 
                       ? 'text-gray-300 cursor-not-allowed' 
-                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
               )}
               
@@ -1098,50 +1107,76 @@ export default function Home() {
                   style={{ transform: `translateX(-${tabScrollPosition}px)` }}
                 >
                   {uploadedFiles.map((file, index) => (
-                    <button
+                    <div
                       key={file.id}
-                      onClick={() => {
-                        setCurrentFileIndex(index)
-                        setFileToDelete(null)
-                      }}
-                      className={`flex-shrink-0 px-4 py-2 text-sm border-r border-gray-300 whitespace-nowrap ${
+                      className={`flex-shrink-0 border-r border-gray-300 cursor-pointer transition-colors duration-200 ${
                         index === currentFileIndex
                           ? 'bg-white border-t border-l border-r border-gray-300'
                           : 'bg-gray-50 hover:bg-gray-100'
                       }`}
-                      style={{ minWidth: '150px' }}
+                      style={{ width: '200px', maxWidth: '200px' }}
+                      onClick={() => console.log('Tab container clicked for:', file.name)}
                     >
-                      <div className="flex items-center gap-2 w-full">
-                        <span className="truncate flex-1 max-w-[100px]">
-                          {truncateFileName(file.name, 20)}
+                      <div className="flex items-start gap-2 w-full px-3 py-2 h-full">
+                        <span 
+                          className="flex-1 cursor-pointer text-xs break-words leading-tight overflow-hidden"
+                          onClick={() => {
+                            setCurrentFileIndex(index)
+                            setFileToDelete(null)
+                          }}
+                          title={file.name}
+                          style={{ 
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical' as const,
+                            maxHeight: '3.6em'
+                          }}
+                        >
+                          {file.name}
                         </span>
                         <div className="relative flex-shrink-0">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
+                              console.log('X button clicked for file:', file.id, file.name)
                               setFileToDelete(file.id)
                             }}
-                            className="text-gray-400 hover:text-red-600"
+                            className="text-red-500 hover:text-red-700 px-1 py-1 rounded hover:bg-red-100 transition-colors duration-200 cursor-pointer relative z-30 bg-red-50 border border-red-200 hover:border-red-300 font-bold text-xs"
+                            title="Delete file"
+                            style={{ 
+                              minWidth: '20px', 
+                              minHeight: '20px',
+                              pointerEvents: 'auto',
+                              userSelect: 'none',
+                              fontSize: '12px'
+                            }}
+                            type="button"
                           >
                             ×
                           </button>
                           
                           {/* File Delete Warning Tooltip */}
                           {fileToDelete === file.id && (
-                            <div className="absolute top-full right-0 transform translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
+                            <div className="absolute top-full right-0 transform translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-[60] p-4 animate-in fade-in-0 zoom-in-95 duration-200">
                               <div className="text-sm text-gray-700 mb-3">
                                 This action cannot be undone. The document will be permanently removed from this upload.
                               </div>
                               <div className="flex space-x-2">
                                 <button
-                                  onClick={() => setFileToDelete(null)}
-                                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setFileToDelete(null)
+                                  }}
+                                  className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors duration-200 font-medium"
                                 >
                                   Cancel
                                 </button>
                                 <button
-                                  onClick={() => confirmFileDelete(file.id)}
-                                  className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    confirmFileDelete(file.id)
+                                  }}
+                                  className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors duration-200 font-medium"
                                 >
                                   Continue
                                 </button>
@@ -1150,23 +1185,31 @@ export default function Home() {
                           )}
                         </div>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
               
               {/* Right Arrow */}
-              {uploadedFiles.length > 4 && (
+              {shouldShowScrollArrows() && (
                 <button
                   onClick={scrollTabsRight}
-                  disabled={tabScrollPosition >= Math.max(0, (uploadedFiles.length * 150) - 600)}
-                  className={`flex-shrink-0 p-2 border-l border-gray-300 ${
-                    tabScrollPosition >= Math.max(0, (uploadedFiles.length * 150) - 600)
+                  disabled={(() => {
+                    const tabWidth = 200
+                    const maxScroll = Math.max(0, (uploadedFiles.length - 4) * tabWidth)
+                    return tabScrollPosition >= maxScroll
+                  })()}
+                  className={`flex-shrink-0 p-3 border-l border-gray-300 transition-colors duration-200 bg-white shadow-sm ${
+                    (() => {
+                      const tabWidth = 200
+                      const maxScroll = Math.max(0, (uploadedFiles.length - 4) * tabWidth)
+                      return tabScrollPosition >= maxScroll
+                    })()
                       ? 'text-gray-300 cursor-not-allowed' 
-                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               )}
             </div>
