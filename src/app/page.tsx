@@ -695,16 +695,28 @@ export default function Home() {
                   </button>
                 </div>
               ) : (
-                <div>
-                  {/* Progress Bar */}
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm text-gray-600 mb-2">
-                      <span>Document Progress</span>
-                      <span>{getDocumentProgress().percentage}%</span>
+                <div className="space-y-3">
+                  {/* Compact Progress Section */}
+                  <div>
+                    <div className="flex justify-between items-center text-xs text-gray-600 mb-1">
+                      <div className="flex items-center">
+                        {getDocumentProgress().percentage === 100 ? (
+                          <>
+                            <CheckCircle className="w-3 h-3 mr-1 text-green-600" />
+                            <span className="text-green-600 font-medium">Complete</span>
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="w-3 h-3 mr-1" />
+                            <span>{getDocumentProgress().total - getDocumentProgress().completed} more needed</span>
+                          </>
+                        )}
+                      </div>
+                      <span className="font-medium">{getDocumentProgress().percentage}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
-                        className={`h-3 rounded-full transition-all duration-500 ease-out ${
+                        className={`h-2 rounded-full transition-all duration-500 ease-out ${
                           getDocumentProgress().percentage === 100 
                             ? 'bg-gradient-to-r from-green-500 to-green-600' 
                             : 'bg-gradient-to-r from-blue-500 to-blue-600'
@@ -714,29 +726,12 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Progress Status */}
-                  <div className="mb-4 flex items-center">
-                    {getDocumentProgress().percentage === 100 ? (
-                      <div className="flex items-center text-green-600">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        <span className="text-sm font-medium">All requirements completed!</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center text-gray-600">
-                        <FileText className="w-4 h-4 mr-2" />
-                        <span className="text-sm">
-                          {getDocumentProgress().total - getDocumentProgress().completed} more document{getDocumentProgress().total - getDocumentProgress().completed !== 1 ? 's' : ''} required
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Book Review Button */}
                   <div className="relative group">
                     <button 
                       onClick={handleScheduleReview}
                       disabled={!areRequirementsMet()}
-                      className={`w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                      className={`w-full px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                         areRequirementsMet() 
                           ? 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5' 
                           : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -747,12 +742,12 @@ export default function Home() {
                     
                     {/* Enhanced tooltip for disabled state */}
                     {!areRequirementsMet() && (
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-56 bg-gray-900 text-white text-sm rounded-lg px-4 py-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl">
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl">
                         <div className="text-center">
-                          <div className="font-medium mb-1">Requirements not met</div>
-                          <div className="text-xs text-gray-300">Complete all document uploads to enable booking</div>
+                          <div className="font-medium mb-0.5">Requirements not met</div>
+                          <div className="text-gray-300">Complete all documents to enable booking</div>
                         </div>
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-3 border-r-3 border-t-3 border-transparent border-t-gray-900"></div>
                       </div>
                     )}
                   </div>
