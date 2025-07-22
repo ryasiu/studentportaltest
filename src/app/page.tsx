@@ -651,21 +651,29 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Schedule Review Card */}
+            {/* Schedule Review Card with Progress */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center mb-4">
-                <div className={`p-3 rounded-full mr-4 ${
-                  scheduledReview ? 'bg-green-100' : areRequirementsMet() ? 'bg-blue-100' : 'bg-gray-100'
-                }`}>
-                  <Calendar className={`w-6 h-6 ${
-                    scheduledReview ? 'text-green-600' : areRequirementsMet() ? 'text-blue-600' : 'text-gray-400'
-                  }`} />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className={`p-3 rounded-full mr-4 ${
+                    scheduledReview ? 'bg-green-100' : areRequirementsMet() ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}>
+                    <Calendar className={`w-6 h-6 ${
+                      scheduledReview ? 'text-green-600' : areRequirementsMet() ? 'text-blue-600' : 'text-gray-400'
+                    }`} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">Review Appointment</h3>
+                    <p className="text-sm text-gray-500">
+                      {scheduledReview ? 'Appointment scheduled' : areRequirementsMet() ? 'Ready to book your review' : 'Complete documents to book'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Review Appointment</h3>
-                  <p className="text-sm text-gray-500">
-                    {scheduledReview ? 'Appointment scheduled' : 'Schedule your review'}
-                  </p>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-gray-800">
+                    {getDocumentProgress().completed}/{getDocumentProgress().total}
+                  </div>
+                  <div className="text-xs text-gray-500">documents</div>
                 </div>
               </div>
               
@@ -687,84 +695,73 @@ export default function Home() {
                   </button>
                 </div>
               ) : (
-                <div className="relative group">
-                  <button 
-                    onClick={handleScheduleReview}
-                    disabled={!areRequirementsMet()}
-                    className={`w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                      areRequirementsMet() 
-                        ? 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5' 
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Book Review
-                  </button>
-                  
-                  {/* Enhanced tooltip for disabled state */}
-                  {!areRequirementsMet() && (
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-56 bg-gray-900 text-white text-sm rounded-lg px-4 py-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl">
-                      <div className="text-center">
-                        <div className="font-medium mb-1">Requirements not met</div>
-                        <div className="text-xs text-gray-300">Complete all document uploads to enable booking</div>
-                      </div>
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                <div>
+                  {/* Progress Bar */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm text-gray-600 mb-2">
+                      <span>Document Progress</span>
+                      <span>{getDocumentProgress().percentage}%</span>
                     </div>
-                  )}
+                    <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                      <div 
+                        className={`h-3 rounded-full transition-all duration-500 ease-out ${
+                          getDocumentProgress().percentage === 100 
+                            ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                            : 'bg-gradient-to-r from-blue-500 to-blue-600'
+                        }`}
+                        style={{ width: `${getDocumentProgress().percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Progress Status */}
+                  <div className="mb-4 flex items-center">
+                    {getDocumentProgress().percentage === 100 ? (
+                      <div className="flex items-center text-green-600">
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        <span className="text-sm font-medium">All requirements completed!</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center text-gray-600">
+                        <FileText className="w-4 h-4 mr-2" />
+                        <span className="text-sm">
+                          {getDocumentProgress().total - getDocumentProgress().completed} more document{getDocumentProgress().total - getDocumentProgress().completed !== 1 ? 's' : ''} required
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Book Review Button */}
+                  <div className="relative group">
+                    <button 
+                      onClick={handleScheduleReview}
+                      disabled={!areRequirementsMet()}
+                      className={`w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                        areRequirementsMet() 
+                          ? 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5' 
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Book Review
+                    </button>
+                    
+                    {/* Enhanced tooltip for disabled state */}
+                    {!areRequirementsMet() && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-56 bg-gray-900 text-white text-sm rounded-lg px-4 py-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl">
+                        <div className="text-center">
+                          <div className="font-medium mb-1">Requirements not met</div>
+                          <div className="text-xs text-gray-300">Complete all document uploads to enable booking</div>
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Document Progress Bar */}
-          <div className="mb-8 bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Document Completion Progress</h3>
-                <p className="text-sm text-gray-500">Complete all required documents to book your appointment</p>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-gray-800">
-                  {getDocumentProgress().completed}/{getDocumentProgress().total}
-                </div>
-                <div className="text-sm text-gray-500">documents completed</div>
-              </div>
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="w-full">
-              <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Progress</span>
-                <span>{getDocumentProgress().percentage}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
-                <div 
-                  className={`h-3 rounded-full transition-all duration-500 ease-out ${
-                    getDocumentProgress().percentage === 100 
-                      ? 'bg-gradient-to-r from-green-500 to-green-600' 
-                      : 'bg-gradient-to-r from-blue-500 to-blue-600'
-                  }`}
-                  style={{ width: `${getDocumentProgress().percentage}%` }}
-                ></div>
-              </div>
-              
-              {/* Progress Status */}
-              <div className="mt-4 flex items-center">
-                {getDocumentProgress().percentage === 100 ? (
-                  <div className="flex items-center text-green-600">
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    <span className="text-sm font-medium">All requirements completed! You can now book your appointment.</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center text-gray-600">
-                    <FileText className="w-5 h-5 mr-2" />
-                    <span className="text-sm">
-                      {getDocumentProgress().total - getDocumentProgress().completed} more document{getDocumentProgress().total - getDocumentProgress().completed !== 1 ? 's' : ''} required to book appointment
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+
 
           {/* CRC/VSC Section */}
           <div className="mb-8">
