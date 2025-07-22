@@ -130,6 +130,20 @@ export default function Home() {
     return getComplianceStatus() === 'Pass'
   }
 
+  // Calculate progress for the progress bar
+  const getDocumentProgress = () => {
+    const medicalDocumentsWithUploads = medicalDocuments.filter(doc => doc.hasUpload)
+    const crcDocumentsWithUploads = crcDocuments.filter(doc => doc.hasUpload)
+    const totalRequiredDocuments = medicalDocuments.length + crcDocuments.length
+    const totalCompleted = medicalDocumentsWithUploads.length + crcDocumentsWithUploads.length
+    
+    return {
+      completed: totalCompleted,
+      total: totalRequiredDocuments,
+      percentage: Math.round((totalCompleted / totalRequiredDocuments) * 100)
+    }
+  }
+
   const handleScheduleReview = () => {
     // For demo purposes, simulate scheduling a review
     if (scheduledReview) {
@@ -698,6 +712,57 @@ export default function Home() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Document Progress Bar */}
+          <div className="mb-8 bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Document Completion Progress</h3>
+                <p className="text-sm text-gray-500">Complete all required documents to book your appointment</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-gray-800">
+                  {getDocumentProgress().completed}/{getDocumentProgress().total}
+                </div>
+                <div className="text-sm text-gray-500">documents completed</div>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full">
+              <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <span>Progress</span>
+                <span>{getDocumentProgress().percentage}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                <div 
+                  className={`h-3 rounded-full transition-all duration-500 ease-out ${
+                    getDocumentProgress().percentage === 100 
+                      ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                      : 'bg-gradient-to-r from-blue-500 to-blue-600'
+                  }`}
+                  style={{ width: `${getDocumentProgress().percentage}%` }}
+                ></div>
+              </div>
+              
+              {/* Progress Status */}
+              <div className="mt-4 flex items-center">
+                {getDocumentProgress().percentage === 100 ? (
+                  <div className="flex items-center text-green-600">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    <span className="text-sm font-medium">All requirements completed! You can now book your appointment.</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center text-gray-600">
+                    <FileText className="w-5 h-5 mr-2" />
+                    <span className="text-sm">
+                      {getDocumentProgress().total - getDocumentProgress().completed} more document{getDocumentProgress().total - getDocumentProgress().completed !== 1 ? 's' : ''} required to book appointment
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
